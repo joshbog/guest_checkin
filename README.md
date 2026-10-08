@@ -68,7 +68,7 @@ In the Firebase console open **Authentication → Settings → Authorized domain
 
 - **Sign in** with the Google account you made an organiser.
 - **Manage guests → Settings**: set the event details and colours, set the 6-digit passcode, and add the people who will help at the door by their Google address.
-- **Add guests** one at a time, or upload an Excel file. A sheet with `Guest name` and `List` columns works; so does one column of names per side headed `Groom` and `Bride`. If the sheet has an `Entry code` column, those codes are kept.
+- **Add guests** one at a time, or upload an Excel file. A sheet with `Guest name` and `List` columns works; so does one column of names for each list headed `Groom`, `Bride` and `Vendors`. The `List` column says `Groom`, `Bride` or `Vendor`. If the sheet has an `Entry code` column, those codes are kept.
 - **Send each guest their pass**: every guest's row has their QR code, with Download and Share.
 - **At the door**: tap Scan a pass and hold each guest's QR code in front of the camera.
 

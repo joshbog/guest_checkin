@@ -360,7 +360,7 @@ dialog.pass::backdrop{background:var(--veil)}
       <button class="icon-btn" type="button" id="import-close" aria-label="Close upload" hidden><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false"><path d="M4 4 16 16M16 4 4 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></button>
     </div>
     <h2 id="import-title">Upload your guest list</h2>
-    <p class="hint">Choose an Excel file with one guest per row: a column headed Guest name and, beside it, a column headed List that says Groom or Bride. A sheet with one column of names for each side, headed Groom and Bride, works too. Every guest gets their own QR code; if the file has an Entry code column, those codes are kept.</p>
+    <p class="hint">Choose an Excel file with one guest per row: a column headed Guest name and, beside it, a column headed List that says Groom, Bride or Vendor. A sheet with one column of names for each, headed Groom, Bride and Vendors, works too. Every guest gets their own QR code; if the file has an Entry code column, those codes are kept.</p>
     <div class="row" id="import-pick">
       <input class="sr" id="import-file" type="file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv">
       <label class="btn" for="import-file">Choose Excel file</label>
@@ -371,7 +371,7 @@ dialog.pass::backdrop{background:var(--veil)}
       <ul class="import-notes" id="import-notes"></ul>
       <div class="field" id="import-default-field" hidden>
         <label class="label" for="import-default">Guests with no list go to</label>
-        <select class="text-in" id="import-default"><option>Groom's guest</option><option>Bride's guest</option></select>
+        <select class="text-in" id="import-default"><option>Groom's guest</option><option>Bride's guest</option><option>Vendor</option></select>
       </div>
       <div class="row">
         <button class="btn" type="button" id="import-go">Add guests</button>
@@ -404,7 +404,7 @@ dialog.pass::backdrop{background:var(--veil)}
         </div>
         <div class="field">
           <label class="sr" for="add-list">Whose guest</label>
-          <select class="text-in" id="add-list"><option>Groom's guest</option><option>Bride's guest</option></select>
+          <select class="text-in" id="add-list"><option>Groom's guest</option><option>Bride's guest</option><option>Vendor</option></select>
         </div>
       </div>
       <div class="row">
@@ -635,7 +635,7 @@ dialog.pass::backdrop{background:var(--veil)}
   var $ = function(id){ return document.getElementById(id); };
   var HOLDER = 'door-' + Math.random().toString(36).slice(2, 10);
   var ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';   // no 0, O, 1 or I, so codes are easy to read aloud and type
-  var LISTS = ["Groom's guest", "Bride's guest"];
+  var LISTS = ["Groom's guest", "Bride's guest", "Vendor"];
   var guests = new Map();          // entry code -> guest record, kept live from the shared guest list
   var loaded = false, db = null, saver = null, busy = false, isOwner = false, canWrite = true;
   var mode = 'door', view = 'in', find = '', resetting = false;
@@ -1418,7 +1418,7 @@ dialog.pass::backdrop{background:var(--veil)}
     });
   }
   function isName(c){ return typeof c === 'string' && /[A-Za-zÀ-ɏḀ-ỿ]/.test(c); }
-  function sideOf(text){ var s = String(text == null ? '' : text).toLowerCase(); return /groom/.test(s) ? LISTS[0] : /bride/.test(s) ? LISTS[1] : null; }
+  function sideOf(text){ var s = String(text == null ? '' : text).toLowerCase(); return /groom/.test(s) ? LISTS[0] : /bride/.test(s) ? LISTS[1] : /vendor/.test(s) ? LISTS[2] : null; }
   function readPeople(rows){
     // what a heading cell is for; long cells are sentences, not headings
     function kind(c){
@@ -1428,7 +1428,7 @@ dialog.pass::backdrop{background:var(--veil)}
       if (/^(entry )?code$/.test(h)) return 'code';
       if (/phone|number|tel|mobile|email|table|seat|file|sent|note|arrived|whatsapp|^no\.?$/.test(h)) return '';
       if (/^(list|side|whose guest|group|category|family)$/.test(h)) return 'list';
-      if (/groom|bride/.test(h)) return 'side';
+      if (/groom|bride|vendor/.test(h)) return 'side';
       if (/^(guest|guests|guest name|guest names|name|names|full name)$/.test(h)) return 'name';
       return '';
     }
@@ -1470,11 +1470,14 @@ dialog.pass::backdrop{background:var(--veil)}
   }
   function showImport(){
     var list = pending.people, n = list.length, withList = list.filter(function(p){ return p.list; });
-    var groom = list.filter(function(p){ return p.list === LISTS[0]; }).length, bride = list.filter(function(p){ return p.list === LISTS[1]; }).length;
+    var perList = LISTS.map(function(l){
+      var k = list.filter(function(p){ return p.list === l; }).length;
+      return k ? k + ' ' + l.toLowerCase() + (k === 1 ? '' : 's') : '';
+    }).filter(Boolean);
     var noList = n - withList.length;
     $('import-count').textContent = n + (n === 1 ? ' guest' : ' guests') + ' to add' + (pending.file ? ' from ' + pending.file : '') + '.';
     var notes = $('import-notes'); notes.textContent = '';
-    if (groom || bride) notes.appendChild(el('li', '', groom + " groom's " + (groom === 1 ? 'guest' : 'guests') + ', ' + bride + " bride's " + (bride === 1 ? 'guest' : 'guests') + (noList ? ', ' + noList + ' with no list' : '') + '.'));
+    if (perList.length) notes.appendChild(el('li', '', perList.join(', ') + (noList ? ', ' + noList + ' with no list' : '') + '.'));
     var keeping = list.filter(function(p){ return p.code && !guests.has(p.code); }).length;
     if (keeping) notes.appendChild(el('li', '', keeping + (keeping === 1 ? ' guest keeps' : ' guests keep') + ' the entry code in the file, so passes already sent still work.'));
     if (pending.skipped) notes.appendChild(el('li', '', pending.skipped + (pending.skipped === 1 ? ' name is' : ' names are') + ' already on the list and will be left as they are.'));
@@ -1501,7 +1504,7 @@ dialog.pass::backdrop{background:var(--veil)}
         var got = readPeople(rows); if (got) found = got;
       }
     } catch (err) { resetImport('That file could not be read. Save it as an Excel .xlsx file and try again.', 'bad'); return; }
-    if (!found) { resetImport('No guest column found. Put the names in a column headed Guest name (or one column each headed Groom and Bride) and try again.', 'bad'); return; }
+    if (!found) { resetImport('No guest column found. Put the names in a column headed Guest name (or one column each headed Groom, Bride and Vendors) and try again.', 'bad'); return; }
     if (!found.people.length) { resetImport('That sheet has the right headings but no names under them.', 'bad'); return; }
     if (found.people.length > 1000) { resetImport('That file has ' + found.people.length + ' names. This page takes up to 1,000 guests.', 'bad'); return; }
     var have = new Set(all().map(function(g){ return g.name.toLowerCase(); })), seen = new Set(), twins = 0;
@@ -1556,7 +1559,7 @@ dialog.pass::backdrop{background:var(--veil)}
       sheet['!cols'] = [{wch: 36}, {wch: 18}];
       X.utils.book_append_sheet(book, sheet, 'Guests');
       await saver.save({filename: 'Guest list template.xlsx', data: new Uint8Array(X.write(book, {bookType: 'xlsx', type: 'array'}))});
-      say('import-msg', 'Template saved. Put one guest on each row, with Groom or Bride in the List column, then upload it here.', 'good');
+      say('import-msg', 'Template saved. Put one guest on each row, with Groom, Bride or Vendor in the List column, then upload it here.', 'good');
     } catch (err) { say('import-msg', err && err.code === 'declined' ? 'Not saved.' : 'Could not save the template here.', err && err.code === 'declined' ? '' : 'bad'); }
   });
   $('import-close').addEventListener('click', function(){ if (importing) return; importOpen = false; resetImport(''); renderAdmin(); });
