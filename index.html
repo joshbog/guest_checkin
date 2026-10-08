@@ -87,6 +87,8 @@ button,input,select{font:inherit;color:inherit}
 .btn{display:inline-grid;place-items:center;font:500 .8rem/1 var(--body);letter-spacing:.14em;text-transform:uppercase;text-decoration:none;cursor:pointer;
   padding:14px 18px;border:1px solid var(--accent);background:var(--wine);color:var(--on-wine);border-radius:0;text-align:center}
 .btn.ghost{background:transparent;color:var(--accent)}
+.btn.danger{background:var(--stop);border-color:var(--stop);color:#fff}
+.btn.ghost.danger{background:transparent;color:var(--stop)}
 .btn:hover{filter:brightness(1.12)}
 .btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
 .btn.big{width:100%;min-height:68px;font-size:1rem;letter-spacing:.2em}
@@ -757,12 +759,26 @@ dialog.pass::backdrop{background:var(--veil)}
         </div>
         <button class="btn ghost" type="button" id="reset">Clear check-ins</button>
       </div>
+      <div class="s-action">
+        <div>
+          <h3 class="s-sub">Remove all guests</h3>
+          <p>Empties the guest list so you can start again. Every pass stops working at the door. Download the list first if you may need it.</p>
+        </div>
+        <button class="btn ghost danger" type="button" id="wipe">Remove all guests</button>
+      </div>
     </div>
     <div class="m-form" id="reset-confirm" hidden>
       <p>Clear every check-in? Every pass becomes unused again.</p>
       <div class="row">
         <button class="btn" type="button" id="reset-yes">Yes, clear them all</button>
         <button class="btn ghost" type="button" id="reset-no">Keep them</button>
+      </div>
+    </div>
+    <div class="m-form" id="wipe-confirm" hidden>
+      <p id="wipe-text">Remove every guest?</p>
+      <div class="row">
+        <button class="btn danger" type="button" id="wipe-yes">Remove all guests</button>
+        <button class="btn ghost" type="button" id="wipe-no">Keep them</button>
       </div>
     </div>
     <p class="msg" id="reset-msg" role="status"></p>
@@ -2287,6 +2303,40 @@ dialog.pass::backdrop{background:var(--veil)}
     resetting = false;
   });
 
+  // Removing every guest: one confirmation that says how many, then a few at a time.
+  var wiping = false;
+  function wipeStep(confirming){
+    $('wipe-confirm').hidden = !confirming; $('wipe').disabled = confirming || wiping;
+    if (!confirming) return;
+    var n = guests.size, inN = all().filter(function(g){ return g.checkedInAt; }).length;
+    $('wipe-text').textContent = 'Remove all ' + n + (n === 1 ? ' guest' : ' guests') + ' from the list?'
+      + (inN ? ' ' + inN + (inN === 1 ? ' has' : ' have') + ' already arrived.' : '')
+      + ' Their passes will stop working at the door, and this cannot be undone.';
+    $('wipe-yes').textContent = 'Remove all ' + n + (n === 1 ? ' guest' : ' guests');
+  }
+  $('wipe').addEventListener('click', function(){
+    say('reset-msg', '');
+    if (!guests.size) { say('reset-msg', 'The guest list is already empty.'); return; }
+    resetStep(false); wipeStep(true);
+  });
+  $('reset').addEventListener('click', function(){ wipeStep(false); });
+  $('wipe-no').addEventListener('click', function(){ wipeStep(false); });
+  $('wipe-yes').addEventListener('click', async function(){
+    if (wiping || !db) return;
+    wiping = true; wipeStep(false);
+    var codes = Array.from(guests.keys()), done = 0, failedN = 0;
+    for (var i = 0; i < codes.length; i += 10) {
+      await Promise.all(codes.slice(i, i + 10).map(function(c){
+        return db.collection('guests').doc(c).delete().then(function(){ done++; picked.delete(c); }, function(){ failedN++; });
+      }));
+      say('reset-msg', 'Removing guests: ' + done + ' of ' + codes.length + '.');
+    }
+    wiping = false; wipeStep(false);
+    say('reset-msg', failedN ? 'Removed ' + done + (done === 1 ? ' guest' : ' guests') + '. ' + failedN + ' could not be removed. Check the signal and try again.'
+      : 'Removed all ' + done + (done === 1 ? ' guest' : ' guests') + '. The guest list is empty.', failedN ? 'bad' : 'good');
+    showReady();
+  });
+
   /* ================= switching between the door and the guest list ================= */
   function render(){ fillTypes(); renderTally(); if (mode === 'admin') renderAdmin(); else if (mode === 'door') renderDoor(); else if (mode === 'settings' && sTab === 'types') renderTypes(); }
   function setMode(m){
@@ -2408,7 +2458,7 @@ dialog.pass::backdrop{background:var(--veil)}
   // openSettings() opens the first tab, openSettings('people') a named one, openSettings(true) the passcode box
   function openSettings(where){
     if (!unlocked) return;
-    renderLock(); renderCi(); resetStep(false); fillEventForm(); renderSwatches(); renderStaff(); renderTypes();
+    renderLock(); renderCi(); resetStep(false); wipeStep(false); fillEventForm(); renderSwatches(); renderStaff(); renderTypes();
     ['lock-msg', 'ci-msg', 'reset-msg', 'event-msg', 'theme-msg', 'staff-msg'].forEach(function(id){ say(id, ''); });
     var tab = where === true ? 'passcode' : (typeof where === 'string' && TABS[where] ? where : 'event');
     sTab = tab; setMode('settings'); showTab(tab);
