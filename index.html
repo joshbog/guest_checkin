@@ -97,10 +97,9 @@ button,input,select{font:inherit;color:inherit}
 .msg.bad{color:var(--stop)}
 .notice{padding:14px 16px;border:1px solid var(--accent);background:var(--banner);color:var(--ink)}
 #signin{display:grid;gap:20px;justify-items:start;padding-block:18px}
-.g-btn{grid-auto-flow:column;gap:12px}
-.g-btn.has-mark{padding:4px 16px 4px 4px}   /* the icon sits on its own white square at the button's left edge */
-.g-chip{display:grid;place-items:center;width:28px;height:28px;background:#fff}
-.g-chip img{display:block;width:18px;height:18px}
+.g-btn{grid-auto-flow:column;gap:10px}
+.g-mark{width:16px;height:16px;background:currentColor;   /* the icon takes the colour of the button's label */
+  -webkit-mask:var(--g) center/contain no-repeat;mask:var(--g) center/contain no-repeat}
 .empty{padding-block:22px;color:var(--muted)}
 
 /* ---------- the door ---------- */
@@ -296,7 +295,7 @@ dialog.pass::backdrop{background:var(--veil)}
 
   <div class="notice nudge" id="signin" hidden>
     <p id="signin-text">Sign in with the Google account you were invited with to open the guest list.</p>
-    <button class="btn small g-btn" type="button" id="signin-go"><span class="g-chip" id="g-chip" hidden><img id="g-mark" alt="" width="18" height="18"></span><span>Sign in with Google</span></button>
+    <button class="btn small g-btn" type="button" id="signin-go"><span class="g-mark" id="g-mark" aria-hidden="true" hidden></span><span>Sign in with Google</span></button>
   </div>
 
   <div class="scanner" id="scanner" hidden>
@@ -1942,14 +1941,15 @@ dialog.pass::backdrop{background:var(--veil)}
 
   /* ================= connect to the shared guest list ================= */
   function notice(text){ var n = $('notice'); n.textContent = text; n.hidden = !text; }
-  // The icon on the sign-in button is Google's own file, fetched from Google only when the prompt is shown.
-  // If it cannot be fetched the button stays as plain text and works the same.
-  var G_MARK = 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg';
+  // The icon on the sign-in button is the single-colour Google icon from the Bootstrap Icons set, fetched
+  // only when the prompt is shown. If it cannot be fetched the button stays as plain text and works the same.
+  var G_MARK = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/google.svg';
   function showSignIn(){
     $('signin').hidden = false;
-    var mark = $('g-mark');
-    mark.addEventListener('load', function(){ $('g-chip').hidden = false; $('signin-go').classList.add('has-mark'); });
-    mark.src = G_MARK;
+    var probe = new Image();
+    probe.crossOrigin = 'anonymous';
+    probe.onload = function(){ var m = $('g-mark'); m.style.setProperty('--g', 'url("' + G_MARK + '")'); m.hidden = false; };
+    probe.src = G_MARK;
   }
   async function start(){
     try { var kept = JSON.parse(localStorage.getItem('event-cfg') || 'null'); if (kept) cfg = cleanCfg(kept); } catch (e) {}
