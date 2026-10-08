@@ -197,12 +197,16 @@ button,input,select{font:inherit;color:inherit}
 .r-meta{display:flex;align-items:baseline;gap:12px;font-size:.92rem;color:var(--muted);font-variant-numeric:tabular-nums}
 
 /* ---------- the guest list manager ---------- */
-.tools{display:flex;flex-wrap:wrap;align-items:end;gap:14px 18px}
+/* the guest list page: the two actions first, then finding a guest, then the list */
+.actions{display:flex;flex-wrap:wrap;gap:12px}
+.actions .btn{flex:1 1 10rem}
+.tools{display:grid;gap:12px}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{padding:12px 12px;border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:0;cursor:pointer;
   font:500 .72rem/1 var(--body);letter-spacing:.14em;text-transform:uppercase}
-.chip[aria-pressed="true"]{background:var(--wine);color:var(--on-wine)}
+.chip[aria-pressed="true"]{background:var(--tab-on)}   /* quiet, so solid burgundy stays with Add a guest */
 .add{display:grid;gap:12px;justify-items:start}
+.add:not(:has(form:not([hidden]))):not(:has(.msg:not(:empty))){display:none}   /* no empty gap while the form is closed */
 .add form{display:grid;gap:12px;width:100%;padding:16px;border:1px solid var(--line);background:var(--banner)}
 .manage li{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;justify-content:normal;gap:10px 14px;padding-block:14px}
 .m-qr{display:block;width:72px;height:72px;padding:4px;background:var(--qr-ground);color:var(--wine-deep);border:1px solid var(--line);border-radius:0;cursor:zoom-in}
@@ -225,18 +229,11 @@ button,input,select{font:inherit;color:inherit}
 .m-pick{width:22px;height:22px;margin:0 2px 0 4px;accent-color:var(--accent);cursor:pointer}
 .m-form{grid-column:1 / -1;display:grid;gap:10px;padding:14px;border:1px solid var(--line);background:var(--banner)}
 .m-form p{color:var(--ink)}
-/* ---------- settings: a page with breadcrumbs and a sticky tab bar ---------- */
+/* ---------- settings: a page with a sticky tab bar ---------- */
 .s-wrap{max-width:1040px}
 .on-settings .mast .wrap,.on-settings .carpet .wrap{max-width:1040px}   /* the header lines up with the wider settings page */
 .s-bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;background:var(--paper);border-bottom:1px solid var(--line)}
-.s-bar .s-wrap{display:grid;gap:4px;padding-top:12px}
-.crumbs{display:flex;flex-wrap:wrap;align-items:baseline;font-size:.92rem;line-height:1.4;color:var(--muted)}
-.crumbs li{display:flex;align-items:baseline;min-width:0}
-.crumbs li + li::before{content:"/";margin-inline:.55em;opacity:.5}
-.crumb{background:none;border:0;border-radius:0;padding:3px 0;font:inherit;color:var(--accent);cursor:pointer;
-  text-decoration:underline;text-decoration-color:transparent;text-underline-offset:3px}
-.crumb:hover{text-decoration-color:currentColor}
-.crumbs [aria-current]{color:var(--ink)}
+.s-bar .s-wrap{display:grid;padding-top:6px}
 .s-tabs{display:flex;gap:clamp(20px,3.6vw,36px);overflow-x:auto;scrollbar-width:none;
   margin-inline:calc(var(--gutter) * -1);padding-inline:var(--gutter)}
 .s-tabs::-webkit-scrollbar{display:none}
@@ -339,6 +336,7 @@ dialog.pass::backdrop{background:var(--veil)}
           <p class="menu-who menu-anim" id="who" hidden><span class="menu-label">Signed in as</span><span id="who-email"></span></p>
           <div class="menu-links">
             <button class="menu-item menu-anim" type="button" id="switch" hidden>Manage guests</button>
+            <button class="menu-item menu-anim" type="button" id="settings-close" hidden>Manage guests</button>
             <button class="menu-item menu-anim" type="button" id="open-settings" hidden>Settings</button>
           </div>
           <div class="menu-foot">
@@ -456,21 +454,12 @@ dialog.pass::backdrop{background:var(--veil)}
     <p class="msg" id="import-msg" role="status"></p>
   </section>
 
-  <section class="tools" id="tools">
-    <div class="field grow">
-      <label class="label" for="q">Find a guest</label>
-      <input class="text-in" id="q" type="search" placeholder="Name or entry code" autocomplete="off" autocorrect="off" spellcheck="false">
-    </div>
-    <div class="chips" role="group" aria-label="Show">
-      <button type="button" class="chip" id="f-all" data-f="all" aria-pressed="true">All<b id="c-all">0</b></button>
-      <button type="button" class="chip" id="f-in" data-f="in" aria-pressed="false">Arrived<b id="c-in">0</b></button>
-      <button type="button" class="chip" id="f-out" data-f="out" aria-pressed="false">Not arrived<b id="c-out">0</b></button>
-    </div>
-    <button class="btn ghost small" type="button" id="sel-start">Select guests</button>
-  </section>
+  <div class="actions">
+    <button class="btn" type="button" id="add-open">Add a guest</button>
+    <button class="btn ghost" type="button" id="sel-start">Select guests</button>
+  </div>
 
   <section class="add">
-    <button class="btn" type="button" id="add-open">Add a guest</button>
     <form id="add-form" hidden novalidate>
       <p class="label">New guest</p>
       <div class="row">
@@ -489,6 +478,16 @@ dialog.pass::backdrop{background:var(--veil)}
       </div>
     </form>
     <p class="msg" id="add-msg" role="status"></p>
+  </section>
+
+  <section class="tools" id="tools">
+    <label class="sr" for="q">Find a guest</label>
+    <input class="text-in" id="q" type="search" placeholder="Find a guest by name or entry code" autocomplete="off" autocorrect="off" spellcheck="false">
+    <div class="chips" role="group" aria-label="Show">
+      <button type="button" class="chip" id="f-all" data-f="all" aria-pressed="true">All<b id="c-all">0</b></button>
+      <button type="button" class="chip" id="f-in" data-f="in" aria-pressed="false">Arrived<b id="c-in">0</b></button>
+      <button type="button" class="chip" id="f-out" data-f="out" aria-pressed="false">Not arrived<b id="c-out">0</b></button>
+    </div>
   </section>
 
   <section aria-label="Guests">
@@ -517,14 +516,6 @@ dialog.pass::backdrop{background:var(--veil)}
 <div id="settings" hidden>
   <div class="s-bar" id="s-bar">
     <div class="wrap s-wrap">
-      <nav aria-label="Breadcrumb">
-        <ol class="crumbs">
-          <li><button class="crumb" type="button" id="crumb-door">Door check-in</button></li>
-          <li><button class="crumb" type="button" id="settings-close">Manage guests</button></li>
-          <li><button class="crumb" type="button" id="crumb-settings">Settings</button></li>
-          <li aria-current="page" id="crumb-here">Event details</li>
-        </ol>
-      </nav>
       <div class="s-tabs" role="tablist" aria-label="Settings sections">
         <button type="button" role="tab" id="tab-event" data-tab="event" aria-controls="event-box" aria-selected="true">Event details</button>
         <button type="button" role="tab" id="tab-theme" data-tab="theme" aria-controls="theme-box" aria-selected="false" tabindex="-1">Colours</button>
@@ -944,7 +935,7 @@ dialog.pass::backdrop{background:var(--veil)}
   });
   /* ================= the header menu ================= */
   // The menu button shows only when the menu has something in it, so a signed-out phone sees none.
-  function menuHasItems(){ return ['who', 'switch', 'open-settings', 'signout'].some(function(id){ return !$(id).hidden; }); }
+  function menuHasItems(){ return ['who', 'switch', 'settings-close', 'open-settings', 'signout'].some(function(id){ return !$(id).hidden; }); }
   function calm(){ try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } }
   function openMenu(){
     var p = $('menu-panel');
@@ -1433,7 +1424,7 @@ dialog.pass::backdrop{background:var(--veil)}
   /* ---------- selecting several guests and removing them together ---------- */
   function renderPicking(shown){
     $('sel-bar').hidden = !picking;
-    $('sel-start').hidden = picking;
+    $('sel-start').hidden = picking || !guests.size;   // nothing to select on an empty list
     if (!picking) return;
     picked.forEach(function(c){ if (!guests.has(c)) picked.delete(c); });
     var n = picked.size, allShown = shown.length > 0 && shown.every(function(g){ return picked.has(g.code); });
@@ -2022,6 +2013,7 @@ dialog.pass::backdrop{background:var(--veil)}
     $('page-title').textContent = mode === 'admin' ? 'Guest list' : mode === 'settings' ? 'Settings' : 'Guest check-in';
     $('switch').textContent = mode === 'door' ? 'Manage guests' : 'Door check-in';
     $('open-settings').hidden = mode !== 'admin';
+    $('settings-close').hidden = mode !== 'settings';   // from Settings, back to the guest list
     document.body.classList.toggle('on-settings', mode === 'settings');
     // the address keeps track of where you are, so a reload comes back to the same place (after the passcode)
     try { history.replaceState(null, '', mode === 'door' ? location.pathname + location.search : mode === 'admin' ? '#admin' : '#settings-' + sTab); } catch (e) {}
@@ -2118,7 +2110,6 @@ dialog.pass::backdrop{background:var(--veil)}
       $(TABS[k][0]).hidden = !on;
       tab.setAttribute('aria-selected', String(on)); tab.tabIndex = on ? 0 : -1;
     });
-    $('crumb-here').textContent = TABS[name][1];
     var preview = name === 'event' || name === 'theme';
     $('s-preview').hidden = !preview; $('s-cols').classList.toggle('with-preview', preview);
     if (mode === 'settings') { try { history.replaceState(null, '', '#settings-' + name); } catch (e) {} }
@@ -2154,8 +2145,6 @@ dialog.pass::backdrop{background:var(--veil)}
     var next = keys[(i + keys.length) % keys.length];
     e.preventDefault(); showTab(next); $('tab-' + next).focus();
   });
-  $('crumb-door').addEventListener('click', leaveManager);
-  $('crumb-settings').addEventListener('click', function(){ showTab('event'); window.scrollTo(0, 0); });
 
   ['lock-old', 'lock-new', 'lock-again', 'gate-pin', 'ci-new', 'ci-again', 'ci-pin'].forEach(function(id){
     $(id).addEventListener('input', function(e){ var d = e.target.value.replace(/[^0-9]/g, '').slice(0, 6); if (d !== e.target.value) e.target.value = d; });
