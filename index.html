@@ -199,12 +199,25 @@ button,input,select{font:inherit;color:inherit}
 /* ---------- the guest list manager ---------- */
 /* the guest list page: the two actions first, then finding a guest, then the list */
 .actions{display:flex;flex-wrap:wrap;gap:12px}
-.actions .btn{flex:1 1 10rem}
+.actions > .btn,.add-menu{flex:1 1 10rem}
+/* Add guests opens two choices: one guest, or many from Excel */
+.add-menu{position:relative;display:grid}
+.add-menu:has(> .add-btn[hidden]){display:none}   /* while the one-guest form is open */
+.add-btn{grid-auto-flow:column;gap:10px}
+.add-btn svg{transition:transform .2s}
+.add-btn[aria-expanded="true"] svg{transform:rotate(180deg)}
+.add-choices{position:absolute;left:0;top:calc(100% + 6px);z-index:20;min-width:100%;width:max-content;max-width:calc(100vw - 32px);display:grid;
+  background:var(--banner);border:1px solid var(--accent);box-shadow:0 14px 30px -14px var(--shadow)}
+.add-choice{display:grid;gap:4px;padding:14px 16px;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;cursor:pointer;color:var(--ink)}
+.add-choice:last-child{border-bottom:0}
+.add-choice b{font:500 .78rem/1.2 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.add-choice span{font-size:.92rem;color:var(--muted)}
+.add-choice:hover,.add-choice:focus-visible{background:var(--tab-on);outline:none}
 .tools{display:grid;gap:12px}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{padding:12px 12px;border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:0;cursor:pointer;
   font:500 .72rem/1 var(--body);letter-spacing:.14em;text-transform:uppercase}
-.chip[aria-pressed="true"]{background:var(--tab-on)}   /* quiet, so solid burgundy stays with Add a guest */
+.chip[aria-pressed="true"]{background:var(--tab-on)}   /* quiet, so solid burgundy stays with Add guests */
 .add{display:grid;gap:12px;justify-items:start}
 .add:not(:has(form:not([hidden]))):not(:has(.msg:not(:empty))){display:none}   /* no empty gap while the form is closed */
 .add form{display:grid;gap:12px;width:100%;padding:16px;border:1px solid var(--line);background:var(--banner)}
@@ -440,6 +453,39 @@ dialog.pass::backdrop{background:var(--veil)}
     <p>No passcode yet, so anyone using this phone can open Manage guests.</p>
     <button class="btn small" type="button" id="lock-nudge-go">Set a passcode</button>
   </div>
+
+  <div class="actions">
+    <div class="add-menu" id="add-menu">
+      <button class="btn add-btn" type="button" id="add-open" aria-haspopup="menu" aria-expanded="false" aria-controls="add-choices">Add guests<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true" focusable="false"><path d="M2 4.2 6 8l4-3.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"/></svg></button>
+      <div class="add-choices" id="add-choices" role="menu" hidden>
+        <button class="add-choice" type="button" role="menuitem" id="add-one"><b>Single guest</b><span>Type one name and choose their list.</span></button>
+        <button class="add-choice" type="button" role="menuitem" id="add-bulk"><b>Bulk upload</b><span>Add many guests at once from an Excel file.</span></button>
+      </div>
+    </div>
+    <button class="btn ghost" type="button" id="sel-start">Select guests</button>
+  </div>
+
+  <section class="add">
+    <form id="add-form" hidden novalidate>
+      <p class="label">New guest</p>
+      <div class="row">
+        <div class="field grow">
+          <label class="sr" for="add-name">Guest name</label>
+          <input class="text-in" id="add-name" type="text" maxlength="60" autocomplete="off" placeholder="Guest name, for example Mrs Ada Obi">
+        </div>
+        <div class="field">
+          <label class="sr" for="add-list">Whose guest</label>
+          <select class="text-in" id="add-list"><option>Groom's guest</option><option>Bride's guest</option><option>Vendor</option></select>
+        </div>
+      </div>
+      <div class="row">
+        <button class="btn" type="submit" id="add-go">Add guest</button>
+        <button class="btn ghost" type="button" id="add-cancel">Close</button>
+      </div>
+    </form>
+    <p class="msg" id="add-msg" role="status"></p>
+  </section>
+
   <section class="notice import" id="import" hidden>
     <div class="sheet-head">
       <p class="eyebrow" id="import-eyebrow">No guests yet</p>
@@ -465,32 +511,6 @@ dialog.pass::backdrop{background:var(--veil)}
       </div>
     </div>
     <p class="msg" id="import-msg" role="status"></p>
-  </section>
-
-  <div class="actions">
-    <button class="btn" type="button" id="add-open">Add a guest</button>
-    <button class="btn ghost" type="button" id="sel-start">Select guests</button>
-  </div>
-
-  <section class="add">
-    <form id="add-form" hidden novalidate>
-      <p class="label">New guest</p>
-      <div class="row">
-        <div class="field grow">
-          <label class="sr" for="add-name">Guest name</label>
-          <input class="text-in" id="add-name" type="text" maxlength="60" autocomplete="off" placeholder="Guest name, for example Mrs Ada Obi">
-        </div>
-        <div class="field">
-          <label class="sr" for="add-list">Whose guest</label>
-          <select class="text-in" id="add-list"><option>Groom's guest</option><option>Bride's guest</option><option>Vendor</option></select>
-        </div>
-      </div>
-      <div class="row">
-        <button class="btn" type="submit" id="add-go">Add guest</button>
-        <button class="btn ghost" type="button" id="add-cancel">Close</button>
-      </div>
-    </form>
-    <p class="msg" id="add-msg" role="status"></p>
   </section>
 
   <section class="tools" id="tools">
@@ -628,7 +648,7 @@ dialog.pass::backdrop{background:var(--veil)}
       <button class="switch" type="button" role="switch" id="lock-toggle" aria-checked="true" aria-labelledby="lock-switch-label"><span></span></button>
     </div>
     <form class="m-form lock-off" id="lock-off-form" novalidate hidden>
-      <p>Enter your current passcode to turn it off. Anyone using an organiser's phone will then be able to open Manage guests.</p>
+      <p>Enter your current passcode to turn it off. The passcode will be deleted, and anyone using an organiser's phone will be able to open Manage guests. To turn it on again you will choose a new one.</p>
       <div class="field">
         <label class="label" for="lock-off-pin">Current passcode</label>
         <input class="text-in pin" id="lock-off-pin" type="text" inputmode="numeric" autocorrect="off" spellcheck="false" pattern="[0-9]*" maxlength="6" autocomplete="off">
@@ -685,13 +705,6 @@ dialog.pass::backdrop{background:var(--veil)}
       <p>Tools that work on the whole list at once.</p>
     </header>
     <div class="s-actions">
-      <div class="s-action">
-        <div>
-          <h3 class="s-sub">Upload from Excel</h3>
-          <p>Add many guests in one go. Names already on the list are left as they are.</p>
-        </div>
-        <button class="btn ghost" type="button" id="open-import">Upload guests</button>
-      </div>
       <div class="s-action">
         <div>
           <h3 class="s-sub">Download the guest list</h3>
@@ -799,6 +812,7 @@ dialog.pass::backdrop{background:var(--veil)}
   var sTab = 'event', wantTab = '', sampleTurn = 0, sampleUrl = '';
   var cam = {on: false, stream: null, frame: 0, reading: false, last: '', lastAt: 0, tickAt: 0, detector: null, canvas: null};
   var lock = null, unlocked = false, wrong = 0, lockedUntil = 0;
+  var lockTurnedOff = false, lockSetting = false;   // the passcode was deliberately turned off (and deleted); a new one is being chosen
 
   /* ---------- what the page and the passes say, and their colours: set in Settings ---------- */
   var THEMES = {
@@ -1631,7 +1645,20 @@ dialog.pass::backdrop{background:var(--veil)}
     }
     return null;
   }
-  $('add-open').addEventListener('click', function(){ $('add-form').hidden = false; $('add-open').hidden = true; say('add-msg', ''); $('add-name').focus(); });
+  function showAddChoices(open){ $('add-choices').hidden = !open; $('add-open').setAttribute('aria-expanded', String(open)); }
+  $('add-open').addEventListener('click', function(){ showAddChoices($('add-choices').hidden); if (!$('add-choices').hidden) $('add-one').focus(); });
+  document.addEventListener('click', function(e){ if (!$('add-choices').hidden && !$('add-menu').contains(e.target)) showAddChoices(false); });
+  $('add-menu').addEventListener('keydown', function(e){ if (e.key === 'Escape' && !$('add-choices').hidden) { showAddChoices(false); $('add-open').focus(); } });
+  $('add-one').addEventListener('click', function(){
+    showAddChoices(false);
+    $('add-form').hidden = false; $('add-open').hidden = true; say('add-msg', ''); $('add-name').focus();
+  });
+  $('add-bulk').addEventListener('click', function(){
+    showAddChoices(false);
+    if (importing) return;
+    importOpen = true; resetImport(''); renderAdmin();
+    try { $('import').scrollIntoView({block: 'start', behavior: 'smooth'}); } catch (e) {}
+  });
   $('add-cancel').addEventListener('click', function(){ $('add-form').hidden = true; $('add-open').hidden = false; dupOk = ''; say('add-msg', ''); });
   $('add-form').addEventListener('submit', async function(e){
     e.preventDefault();
@@ -1837,9 +1864,6 @@ dialog.pass::backdrop{background:var(--veil)}
     } catch (err) { say('import-msg', err && err.code === 'declined' ? 'Not saved.' : 'Could not save the template here.', err && err.code === 'declined' ? '' : 'bad'); }
   });
   $('import-close').addEventListener('click', function(){ if (importing) return; importOpen = false; resetImport(''); renderAdmin(); });
-  $('open-import').addEventListener('click', function(){
-    importOpen = true; resetImport(''); closeSettings();
-  });
 
   /* ---------- drawing a pass, to match the printed ones: 100 x 150 mm at 300 dpi ---------- */
   var PW = 1181, PH = 1772, MM = PW / 100, PT = 300 / 72;
@@ -2071,7 +2095,9 @@ dialog.pass::backdrop{background:var(--veil)}
   async function readLock(){
     var snap = await db.doc('settings/manager').get();
     var d = snap.exists ? snap.data() : null;
-    lock = d && d.salt && d.hash ? {salt: String(d.salt), hash: String(d.hash), rounds: Number(d.rounds) || ROUNDS, off: d.off === true} : null;
+    // Turning the passcode off deletes it, so an 'off' record never opens with an old passcode.
+    lockTurnedOff = !!d && d.off === true;
+    lock = d && d.salt && d.hash && d.off !== true ? {salt: String(d.salt), hash: String(d.hash), rounds: Number(d.rounds) || ROUNDS} : null;
     return lock;
   }
   function waitLeft(){ return Math.max(0, Math.ceil((lockedUntil - Date.now()) / 1000)); }
@@ -2088,7 +2114,7 @@ dialog.pass::backdrop{background:var(--veil)}
     if (!isOwner) { openGate(canWrite ? 'Only an organiser can manage guests. This account can scan passes at the door.' : 'This account has not been invited to this guest list.', '', false); return; }
     if (!window.crypto || !crypto.subtle) { openGate('This browser cannot check a passcode. Open the page in an up-to-date browser.', 'bad', false); return; }
     try { await readLock(); } catch (e) { openGate('Could not reach the guest list. Check the signal and try again.', 'bad', false); return; }
-    if (!lock || lock.off) {
+    if (!lock) {
       // No passcode yet, or turned off in Settings: an organiser goes straight in.
       if (isOwner) { enterManager(); return; }
       enterManager();
@@ -2158,7 +2184,7 @@ dialog.pass::backdrop{background:var(--veil)}
     var tab = where === true ? 'passcode' : (typeof where === 'string' && TABS[where] ? where : 'event');
     sTab = tab; setMode('settings'); showTab(tab);
     window.scrollTo(0, 0);
-    if (where === true && isOwner) $(lock ? 'lock-old' : 'lock-new').focus();
+    if (where === true && isOwner) { if (!lock) { lockSetting = true; renderLock(); } $(lock ? 'lock-old' : 'lock-new').focus(); }
   }
   function closeSettings(){
     clearPins();
@@ -2185,18 +2211,19 @@ dialog.pass::backdrop{background:var(--veil)}
   $('event-nudge-go').addEventListener('click', function(){ openSettings('event'); });
   $('settings-close').addEventListener('click', closeSettings);
   function renderLock(){
-    $('lock-form').hidden = !isOwner;
-    $('lock-nudge').hidden = !(isOwner && !lock);
+    if (lock) lockSetting = false;
+    $('lock-form').hidden = !isOwner || !(lock || lockSetting);   // with no passcode the form shows only while turning it on
+    $('lock-nudge').hidden = !(isOwner && !lock && !lockTurnedOff);
     $('lock-old-field').hidden = !lock;
-    $('lock-go').textContent = lock ? 'Change passcode' : 'Set passcode';
+    $('lock-go').textContent = lock ? 'Change passcode' : 'Turn on with this passcode';
     $('lock-state').textContent = !isOwner ? 'Manage guests opens with a 6-digit passcode. Only an organiser can change it.'
-      : lock && lock.off ? 'The passcode is off, so Manage guests opens without it. Turn it back on below whenever you like.'
       : lock ? 'Manage guests asks for your 6-digit passcode every time it is opened. Going back to the door locks it again.'
-      : 'No passcode yet. Choose 6 digits; you will be asked for them each time Manage guests is opened.';
-    $('lock-switch').hidden = !(isOwner && lock);
-    $('lock-toggle').setAttribute('aria-checked', String(!!(lock && !lock.off)));
-    $('lock-switch-note').textContent = lock && lock.off ? 'Off: Manage guests opens without the passcode.' : 'On: Manage guests asks for it every time it is opened.';
-    if (!lock || lock.off) { $('lock-off-form').hidden = true; $('lock-off-pin').value = ''; }
+      : lockTurnedOff ? 'The passcode is off, so Manage guests opens without one. To turn it on, choose a new passcode.'
+      : 'No passcode yet. Turn it on and choose 6 digits; you will be asked for them each time Manage guests is opened.';
+    $('lock-switch').hidden = !isOwner;
+    $('lock-toggle').setAttribute('aria-checked', String(!!lock));
+    $('lock-switch-note').textContent = lock ? 'On: Manage guests asks for it every time it is opened.' : 'Off: Manage guests opens without a passcode.';
+    if (!lock) { $('lock-off-form').hidden = true; $('lock-off-pin').value = ''; }
     $('lock-state').className = 'hint';
   }
   $('lock-form').addEventListener('submit', async function(e){
@@ -2209,13 +2236,13 @@ dialog.pass::backdrop{background:var(--veil)}
     try {
       if (lock && !(await matchesLock(old))) { say('lock-msg', 'The current passcode is wrong.', 'bad'); $('lock-go').disabled = false; return; }
       var salt = new Uint8Array(16); crypto.getRandomValues(salt);
-      var wasOff = !!(lock && lock.off);
+      var turningOn = !lock;
       var rec = {salt: hex(salt), hash: await fingerprint(pin, hex(salt), ROUNDS), rounds: ROUNDS, setAt: Date.now()};
       await db.doc('settings/manager').set(rec);
-      lock = {salt: rec.salt, hash: rec.hash, rounds: rec.rounds, off: false};
+      lock = {salt: rec.salt, hash: rec.hash, rounds: rec.rounds}; lockTurnedOff = false; lockSetting = false;
       ['lock-old', 'lock-new', 'lock-again'].forEach(function(id){ $(id).value = ''; });
       renderLock();
-      say('lock-msg', 'Passcode saved' + (wasOff ? ' and turned on' : '') + '. You will be asked for it the next time you open Manage guests.', 'good');
+      say('lock-msg', turningOn ? 'Passcode on. You will be asked for it the next time you open Manage guests.' : 'Passcode changed. You will be asked for the new one the next time you open Manage guests.', 'good');
     } catch (err) {
       say('lock-msg', 'Could not save the passcode. Check the signal and try again.', 'bad');
     }
@@ -2223,24 +2250,19 @@ dialog.pass::backdrop{background:var(--veil)}
   });
 
   /* ---------- turning the passcode off and on ---------- */
-  // Turning it off asks for the current passcode, like changing it; turning it back on needs nothing.
-  async function saveLockOff(off){
-    var rec = {salt: lock.salt, hash: lock.hash, rounds: lock.rounds, off: off, setAt: Date.now()};
-    await db.doc('settings/manager').set(rec);
-    lock.off = off;
-  }
-  $('lock-toggle').addEventListener('click', async function(){
-    if (!db || !isOwner || !lock) return;
-    if (!lock.off) {   // on: ask for the passcode before turning it off
+  // Off deletes the passcode (it needs the current one first); on means choosing a new one.
+  $('lock-toggle').addEventListener('click', function(){
+    if (!db || !isOwner) return;
+    say('lock-msg', '');
+    if (lock) {   // on: ask for the passcode before turning it off
       var showing = !$('lock-off-form').hidden;
-      $('lock-off-form').hidden = showing; say('lock-msg', '');
+      $('lock-off-form').hidden = showing;
       if (!showing) $('lock-off-pin').focus();
       return;
     }
-    $('lock-toggle').disabled = true;
-    try { await saveLockOff(false); renderLock(); say('lock-msg', 'The passcode is on again. Manage guests will ask for it next time.', 'good'); }
-    catch (err) { say('lock-msg', 'Could not turn the passcode on. Check the signal and try again.', 'bad'); }
-    $('lock-toggle').disabled = false;
+    lockSetting = !lockSetting;   // off: show or hide the form for a new passcode
+    renderLock();
+    if (lockSetting) $('lock-new').focus();
   });
   $('lock-off-cancel').addEventListener('click', function(){ $('lock-off-form').hidden = true; $('lock-off-pin').value = ''; say('lock-msg', ''); });
   $('lock-off-form').addEventListener('submit', async function(e){
@@ -2251,7 +2273,13 @@ dialog.pass::backdrop{background:var(--veil)}
     $('lock-off-go').disabled = true;
     try {
       if (!(await matchesLock(pin))) { say('lock-msg', 'That passcode is wrong.', 'bad'); $('lock-off-pin').value = ''; }
-      else { await saveLockOff(true); renderLock(); say('lock-msg', 'The passcode is off. Manage guests now opens without it.', 'good'); }
+      else {
+        await db.doc('settings/manager').set({off: true, offAt: Date.now()});   // the passcode itself is gone
+        lock = null; lockTurnedOff = true; lockSetting = false;
+        ['lock-old', 'lock-new', 'lock-again'].forEach(function(id){ $(id).value = ''; });
+        renderLock();
+        say('lock-msg', 'The passcode is off and has been deleted. Manage guests now opens without one. To turn it on again, choose a new passcode.', 'good');
+      }
     } catch (err) { say('lock-msg', 'Could not turn the passcode off. Check the signal and try again.', 'bad'); }
     $('lock-off-go').disabled = false;
   });
