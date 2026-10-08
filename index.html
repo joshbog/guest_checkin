@@ -148,7 +148,8 @@ button,input,select{font:inherit;color:inherit}
 .typed{display:grid;gap:8px}
 .typed .text-in{flex:1 1 11rem;width:auto;font-weight:500;font-size:1.1rem;letter-spacing:.18em;text-transform:uppercase}
 
-.ledger{display:grid;gap:0;margin-top:clamp(8px,2vw,16px)}
+.ledger{display:grid;gap:0;margin-top:clamp(28px,6vw,48px)}   /* clear space between the check-in tools and the list */
+.ledger-title{font:400 clamp(1.6rem,5.4vw,2.1rem)/1.1 var(--display);margin-bottom:14px;text-wrap:balance}
 .ledger-bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;display:grid;gap:10px;padding-bottom:10px;
   background:var(--paper);border-bottom:1px solid var(--line)}   /* the tabs and the search stay in reach down a long list */
 .tabs{display:flex;gap:0;border-bottom:1px solid var(--accent)}
@@ -343,7 +344,8 @@ dialog.pass::backdrop{background:var(--veil)}
     <button class="btn small" type="button" id="begin-go">Get started</button>
   </div>
 
-  <section class="ledger" id="ledger" aria-label="Arrivals">
+  <section class="ledger" id="ledger" aria-labelledby="ledger-title">
+    <h2 class="ledger-title" id="ledger-title">Guest list</h2>
     <div class="ledger-bar" id="ledger-bar">
       <div class="tabs" role="tablist">
         <button type="button" id="tab-in" role="tab" aria-selected="true" aria-controls="rows">Arrived<b id="n-in">0</b></button>
