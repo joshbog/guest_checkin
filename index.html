@@ -123,11 +123,6 @@ button,input,select{font:inherit;color:inherit}
 .verdict.busy .v-mark{animation:pulse 1s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.35}}
 
-.welcome{display:grid;gap:16px;justify-items:start;padding:clamp(24px,6vw,44px);background:var(--banner);border:1px solid var(--line)}
-.welcome h2{font:400 clamp(1.9rem,7vw,2.7rem)/1.08 var(--display);text-wrap:balance}
-.welcome p{max-width:32rem}
-.welcome .hint{color:var(--muted);font-size:.98rem}
-.welcome .btn.big{max-width:24rem;margin-top:4px}
 .scanner{display:grid;gap:10px}
 .cam{position:relative;aspect-ratio:4 / 3;max-height:62dvh;width:100%;overflow:hidden;background:var(--cam)}
 .cam video{display:block;width:100%;height:100%;object-fit:cover}
@@ -274,7 +269,7 @@ dialog.pass::backdrop{background:var(--veil)}
       <button class="btn ghost small" type="button" id="open-settings" hidden>Settings</button>
     </div>
   </div>
-  <div class="carpet">
+  <div class="carpet" id="carpet">
     <ul class="wrap">
       <li id="when"></li>
       <li class="tally" id="tally" role="status"><i>Opening the guest list</i></li>
@@ -294,12 +289,10 @@ dialog.pass::backdrop{background:var(--veil)}
     <button class="v-close" type="button" id="v-close" aria-label="Clear this result" hidden><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false"><path d="M4 4 16 16M16 4 4 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></button>
   </section>
 
-  <section class="welcome" id="signin" hidden>
-    <h2>Sign in to check guests in</h2>
-    <p id="signin-text">Use the Google account you were invited with.</p>
-    <button class="btn big" type="button" id="signin-go">Sign in with Google</button>
-    <p class="hint">Organisers manage the guest list and door helpers scan passes. An account that has not been invited sees nothing.</p>
-  </section>
+  <div class="notice nudge" id="signin" hidden>
+    <p id="signin-text">Sign in with the Google account you were invited with to open the guest list.</p>
+    <button class="btn small" type="button" id="signin-go">Sign in with Google</button>
+  </div>
 
   <div class="scanner" id="scanner" hidden>
     <div class="cam">
@@ -1075,8 +1068,12 @@ dialog.pass::backdrop{background:var(--veil)}
   function renderTally(){
     var list = all(), inside = list.filter(function(g){ return g.checkedInAt; }).length;
     var tally = $('tally'); tally.textContent = '';
+    var out = loaded && noData && !noAccess;   // nobody is signed in: no count and no arrivals list to show
+    tally.hidden = out; $('ledger').hidden = out;
+    $('carpet').hidden = out && !$('when').textContent;   // the band stays only if it has the event line to show
+    if (out) return;
     if (!loaded) tally.appendChild(el('i', '', 'Opening the guest list'));
-    else if (noData) { if (noAccess) tally.appendChild(el('i', '', 'This account is not invited')); }   // signed out: the page itself asks you to sign in
+    else if (noData) tally.appendChild(el('i', '', 'This account is not invited'));
     else if (!list.length) tally.appendChild(el('i', '', 'No guests yet'));
     else {
       tally.appendChild(el('b', '', inside));
@@ -1104,7 +1101,7 @@ dialog.pass::backdrop{background:var(--veil)}
     var empty = $('empty');
     empty.hidden = shown.length > 0;
     empty.textContent = !loaded ? 'Opening the guest list.'
-      : noData ? 'Arrivals show here once this device is signed in.'
+      : noData ? 'Arrivals show here once an organiser has invited this account.'
       : !list.length ? 'No guests on the list yet.'
       : view === 'in' ? 'Guests appear here as they are checked in.' : 'Everyone on the list has arrived.';
   }
@@ -1945,11 +1942,7 @@ dialog.pass::backdrop{background:var(--veil)}
     applyAll();
     render();
     var site = window.site, claude = window.claude;
-    function shut(){
-      loaded = true; noData = true;
-      ['scan-acts', 'code-form', 'verdict', 'ledger'].forEach(function(id){ $(id).hidden = true; });
-      render();
-    }
+    function shut(){ loaded = true; noData = true; $('scan-acts').hidden = true; $('code-form').hidden = true; render(); }
     if (!site || !claude) { shut(); notice('This page did not load completely. Check the signal and reload.'); return; }
     var who = await site.state;
     var got = await Promise.all([claude.use('db'), claude.use('user'), claude.use('downloads')]);
