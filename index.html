@@ -29,7 +29,8 @@ img{max-width:100%}
   --paper:#FBF7EE;        /* ivory, the main colour */
   --paper-2:#F4EDDE;      /* deeper ivory */
   --strip:#E8E1D2;        /* the date strip: the deeper ivory, a shade darker */
-  --tab-on:#EADCD6;       /* the chosen Arrived / Still to come tab: a pale burgundy, quieter than Scan a pass */
+  --tab-on:#EADCD6;
+  --menu-line:rgba(251,243,226,.2);   /* hairlines on the burgundy menu */       /* the chosen Arrived / Still to come tab: a pale burgundy, quieter than Scan a pass */
   --banner:#FFFDF8;       /* flat banner white */
   --ink:#33221A;
   --muted:#6C594B;
@@ -141,18 +142,40 @@ button,input,select{font:inherit;color:inherit}
 .cam video{display:block;width:100%;height:100%;object-fit:cover}
 .reticle{position:absolute;left:50%;top:50%;width:min(58%,300px);aspect-ratio:1;translate:-50% -50%;border:2px solid var(--on-cam);opacity:.9;pointer-events:none}
 .scan-acts{display:grid;gap:10px;justify-items:center}
-/* the header menu: who is signed in, where to go, sign out */
-.menu{position:relative;flex:none;align-self:center}
-.menu-btn .i-shut,.menu-btn[aria-expanded="true"] .i-open{display:none}
-.menu-btn[aria-expanded="true"] .i-shut{display:block}
-.menu-panel{position:absolute;right:0;top:calc(100% + 8px);z-index:30;width:max-content;min-width:240px;max-width:calc(100vw - 32px);display:grid;
-  background:var(--banner);border:1px solid var(--accent);box-shadow:0 14px 30px -14px var(--shadow)}
-.menu-who{display:grid;gap:3px;padding:14px 16px;border-bottom:1px solid var(--line);font-size:.95rem;color:var(--ink);overflow-wrap:anywhere}
-.menu-label{font:500 .68rem/1.3 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
-.menu-item{display:block;width:100%;text-align:left;padding:15px 16px;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;
-  color:var(--accent);font:500 .78rem/1.2 var(--body);letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
-.menu-panel > :last-child{border-bottom:0}
-.menu-item:hover,.menu-item:focus-visible{background:var(--tab-on);outline:none}
+/* the menu: a deep burgundy sheet that slides in from the right and covers the screen,
+   its lines following one after another; who is signed in, where to go, sign out */
+.menu{flex:none;align-self:center}
+.menu-panel{position:fixed;inset:0;z-index:60;overflow-y:auto;overscroll-behavior:contain;
+  padding:calc(env(safe-area-inset-top,0px) + 18px) var(--gutter) calc(env(safe-area-inset-bottom,0px) + 28px);
+  background:var(--wine-deep);color:var(--on-wine);animation:menu-in .46s cubic-bezier(.2,.8,.2,1) both}
+.menu-panel.closing{animation:menu-out .3s cubic-bezier(.5,0,.9,.4) both}
+.menu-panel.closing .menu-anim{animation:item-out .2s ease-in both}
+@keyframes menu-in{from{transform:translateX(100%)}to{transform:none}}
+@keyframes menu-out{from{transform:none}to{transform:translateX(100%)}}
+@keyframes item-in{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+@keyframes item-out{to{opacity:0}}
+.menu-inner{max-width:720px;min-height:100%;margin-inline:auto;display:flex;flex-direction:column;gap:clamp(28px,6vh,48px)}
+.menu-top{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.menu-event{font:500 .74rem/1.4 var(--body);letter-spacing:.22em;text-transform:uppercase;color:var(--on-wine-soft);min-width:0}
+.menu-close{flex:none;width:44px;height:44px;display:grid;place-items:center;padding:0;background:transparent;color:var(--on-wine);
+  border:1px solid var(--on-wine-soft);border-radius:0;cursor:pointer;transition:background .2s,color .2s}
+.menu-close:hover,.menu-close:focus-visible{background:var(--on-wine);color:var(--wine-deep);outline:none}
+.menu-who{display:grid;gap:4px;font-size:1.02rem;color:var(--on-wine);overflow-wrap:anywhere}
+.menu-label{font:500 .68rem/1.3 var(--body);letter-spacing:.18em;text-transform:uppercase;color:var(--on-wine-soft)}
+.menu-links{display:grid;border-top:1px solid var(--menu-line)}
+.menu-item{display:flex;align-items:baseline;justify-content:space-between;gap:16px;width:100%;padding:clamp(16px,3vh,24px) 0;
+  background:transparent;border:0;border-bottom:1px solid var(--menu-line);border-radius:0;cursor:pointer;text-align:left;
+  color:var(--on-wine);font:400 clamp(2.1rem,9vw,3.2rem)/1.05 var(--display)}
+.menu-item::after{content:"\2192";font:300 .5em/1 var(--body);color:var(--on-wine-soft);transition:transform .25s cubic-bezier(.2,.8,.2,1),color .25s}
+.menu-item:hover::after,.menu-item:focus-visible::after{transform:translateX(8px);color:var(--on-wine)}
+.menu-item:focus-visible{outline:none;text-decoration:underline;text-underline-offset:.18em;text-decoration-thickness:1px}
+.menu-foot{margin-top:auto;display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:12px 24px}
+.menu-out{padding:8px 0;background:transparent;border:0;border-bottom:1px solid var(--on-wine-soft);border-radius:0;cursor:pointer;
+  color:var(--on-wine);font:500 .8rem/1.2 var(--body);letter-spacing:.18em;text-transform:uppercase}
+.menu-out:hover,.menu-out:focus-visible{border-color:var(--on-wine);outline:none}
+.menu-when{font:500 .7rem/1.4 var(--body);letter-spacing:.18em;text-transform:uppercase;color:var(--on-wine-soft)}
+.menu-anim{animation:item-in .55s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0) * 70ms + 160ms)}
+@media (prefers-reduced-motion:reduce){.menu-panel,.menu-panel.closing,.menu-anim,.menu-panel.closing .menu-anim{animation:none}}
 .staff{display:grid;width:100%}
 .staff li{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 14px;padding-block:10px;border-bottom:1px solid var(--line)}
 .staff .s-mail{min-width:0;overflow-wrap:anywhere}
@@ -305,14 +328,24 @@ dialog.pass::backdrop{background:var(--veil)}
     </div>
     <nav class="menu" id="menu" aria-label="Menu">
       <button class="icon-btn menu-btn" type="button" id="menu-btn" aria-label="Menu" aria-expanded="false" aria-controls="menu-panel" hidden>
-        <svg class="i-open" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false"><path d="M3 5.5h14M3 10h14M3 14.5h14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg>
-        <svg class="i-shut" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false"><path d="M4 4 16 16M16 4 4 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg>
+        <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false"><path d="M3 5.5h14M3 10h14M3 14.5h14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg>
       </button>
-      <div class="menu-panel" id="menu-panel" hidden>
-        <p class="menu-who" id="who" hidden><span class="menu-label">Signed in as</span><span id="who-email"></span></p>
-        <button class="menu-item" type="button" id="switch" hidden>Manage guests</button>
-        <button class="menu-item" type="button" id="open-settings" hidden>Settings</button>
-        <button class="menu-item" type="button" id="signout" hidden>Sign out</button>
+      <div class="menu-panel" id="menu-panel" role="dialog" aria-modal="true" aria-label="Menu" hidden>
+        <div class="menu-inner">
+          <div class="menu-top">
+            <p class="menu-event" id="menu-event"></p>
+            <button class="menu-close" type="button" id="menu-close" aria-label="Close menu"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false"><path d="M4 4 16 16M16 4 4 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></button>
+          </div>
+          <p class="menu-who menu-anim" id="who" hidden><span class="menu-label">Signed in as</span><span id="who-email"></span></p>
+          <div class="menu-links">
+            <button class="menu-item menu-anim" type="button" id="switch" hidden>Manage guests</button>
+            <button class="menu-item menu-anim" type="button" id="open-settings" hidden>Settings</button>
+          </div>
+          <div class="menu-foot">
+            <button class="menu-out menu-anim" type="button" id="signout" hidden>Sign out</button>
+            <p class="menu-when menu-anim" id="menu-when"></p>
+          </div>
+        </div>
       </div>
     </nav>
   </div>
@@ -792,7 +825,7 @@ dialog.pass::backdrop{background:var(--veil)}
   }
   function applyTheme(){
     var T = THEMES[cfg.theme] || THEMES.burgundy, st = document.documentElement.style;
-    [['--paper', T.paper], ['--paper-2', T.paper2], ['--strip', blend(T.ink, T.paper2, .06)], ['--tab-on', blend(T.accent, T.paper, .12)], ['--banner', T.banner], ['--ink', T.ink], ['--muted', T.muted], ['--accent', T.accent],
+    [['--paper', T.paper], ['--paper-2', T.paper2], ['--strip', blend(T.ink, T.paper2, .06)], ['--tab-on', blend(T.accent, T.paper, .12)], ['--menu-line', rgba(T.on, .2)], ['--banner', T.banner], ['--ink', T.ink], ['--muted', T.muted], ['--accent', T.accent],
      ['--wine', T.accent], ['--wine-deep', T.deep], ['--on-wine', T.on], ['--on-wine-soft', T.onSoft],
      ['--line', rgba(T.accent, .2)], ['--shadow', rgba(T.deep, .32)], ['--veil', rgba(T.ink, .55)]].forEach(function(p){ st.setProperty(p[0], p[1]); });
     C = {paper: T.paper, ink: T.ink, muted: T.muted, wine: T.accent, wineDeep: T.deep, onWine: T.on, onWineSoft: T.onSoft, line: blend(T.accent, T.paper, .2)};
@@ -912,16 +945,43 @@ dialog.pass::backdrop{background:var(--veil)}
   /* ================= the header menu ================= */
   // The menu button shows only when the menu has something in it, so a signed-out phone sees none.
   function menuHasItems(){ return ['who', 'switch', 'open-settings', 'signout'].some(function(id){ return !$(id).hidden; }); }
-  function openMenu(){ if ($('menu-panel').hidden) { $('menu-panel').hidden = false; $('menu-btn').setAttribute('aria-expanded', 'true'); } }
-  function closeMenu(){ if (!$('menu-panel').hidden) { $('menu-panel').hidden = true; $('menu-btn').setAttribute('aria-expanded', 'false'); } }
+  function calm(){ try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } }
+  function openMenu(){
+    var p = $('menu-panel');
+    if (!p.hidden && !p.classList.contains('closing')) return;
+    p.classList.remove('closing');
+    $('menu-event').textContent = $('mast-type').textContent;
+    $('menu-when').textContent = $('when').textContent;
+    var i = 0;   // the lines that show come in one after another
+    p.querySelectorAll('.menu-anim').forEach(function(n){ if (!n.hidden) n.style.setProperty('--i', i++); });
+    p.hidden = false;
+    $('menu-btn').setAttribute('aria-expanded', 'true');
+    document.documentElement.style.overflow = 'hidden';
+    try { $('menu-close').focus({preventScroll: true}); } catch (e) {}
+  }
+  function closeMenu(focusBack){
+    var p = $('menu-panel');
+    if (p.hidden || p.classList.contains('closing')) return;
+    $('menu-btn').setAttribute('aria-expanded', 'false');
+    document.documentElement.style.overflow = '';
+    var finished = false;
+    function done(){ if (finished) return; finished = true; p.classList.remove('closing'); p.hidden = true; }
+    if (calm()) done();
+    else {
+      p.classList.add('closing');
+      p.addEventListener('animationend', function end(e){ if (e.target !== p) return; p.removeEventListener('animationend', end); done(); });
+      setTimeout(done, 450);
+    }
+    if (focusBack) { try { $('menu-btn').focus({preventScroll: true}); } catch (e) {} }
+  }
   function syncMenu(){ var none = !menuHasItems(); if ($('menu-btn').hidden !== none) $('menu-btn').hidden = none; if (none) closeMenu(); }
   new MutationObserver(function(recs){
     if (recs.some(function(r){ return r.target !== $('menu-panel'); })) syncMenu();
   }).observe($('menu-panel'), {subtree: true, attributes: true, attributeFilter: ['hidden']});
-  $('menu-btn').addEventListener('click', function(){ if ($('menu-panel').hidden) openMenu(); else closeMenu(); });
-  $('menu-panel').addEventListener('click', function(e){ if (e.target.closest && e.target.closest('.menu-item')) closeMenu(); });
-  document.addEventListener('click', function(e){ if (!$('menu').contains(e.target)) closeMenu(); });
-  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !$('menu-panel').hidden) { closeMenu(); $('menu-btn').focus(); } });
+  $('menu-btn').addEventListener('click', openMenu);
+  $('menu-close').addEventListener('click', function(){ closeMenu(true); });
+  $('menu-panel').addEventListener('click', function(e){ if (e.target.closest && e.target.closest('.menu-item, .menu-out')) closeMenu(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !$('menu-panel').hidden) closeMenu(true); });
 
   $('signout').addEventListener('click', async function(){ stopCamera(); try { await window.site.signOut(); } catch (e) {} location.reload(); });
 
