@@ -297,6 +297,7 @@ dialog.pass{border:1px solid var(--accent);border-radius:0;padding:0;background:
 dialog.pass::backdrop{background:var(--veil)}
 .pass-in{display:grid;gap:12px;padding:16px}
 .pass-in img{display:block;width:100%;height:auto;border:1px solid var(--line);background:var(--banner)}
+.fmt-choices{display:grid;border:1px solid var(--line);background:var(--banner)}
 .pass-in .hint{color:var(--muted);font-size:.95rem}
 .ci-name{font:400 1.6rem/1.15 var(--display);overflow-wrap:anywhere;margin-top:-4px}
 /* a door row: the guest's name over their list on the left; who checked them in and when, or Check in, on the right */
@@ -839,6 +840,19 @@ dialog.pass::backdrop{background:var(--veil)}
       <button class="btn ghost" type="button" id="pass-share">Share</button>
     </div>
     <p class="hint" id="pass-hint" hidden>To save the pass, press and hold the picture, then choose Save or Share.</p>
+  </div>
+</dialog>
+
+<dialog class="pass fmt" id="fmt-dialog" aria-labelledby="fmt-title">
+  <div class="pass-in">
+    <div class="sheet-head">
+      <p class="eyebrow" id="fmt-title">Download the pass</p>
+      <button class="icon-btn" type="button" id="fmt-close" aria-label="Cancel"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false"><path d="M4 4 16 16M16 4 4 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></button>
+    </div>
+    <div class="fmt-choices">
+      <button type="button" class="add-choice" id="fmt-png"><b>PNG picture</b><span>Best for WhatsApp and saving to photos</span></button>
+      <button type="button" class="add-choice" id="fmt-pdf"><b>PDF</b><span>Best for printing or email</span></button>
+    </div>
   </div>
 </dialog>
 
@@ -1804,12 +1818,8 @@ dialog.pass::backdrop{background:var(--veil)}
     if (act === 'pass') { openPass(g); return; }
     if (act === 'regen') { rowState = {code: code, mode: 'regen'}; renderAdmin(); return; }
     if (act === 'download' || act === 'share') {
-      if (!window.qrcode || !window.jsQR) { say('m-msg', 'The pass maker did not load. Check the signal and reload the page.', 'bad'); return; }
-      btn.disabled = true; say('m-msg', 'Drawing the pass for ' + g.name + '.');
-      try {
-        var blob = await passBlob(g);
-        if (act === 'share') await sharePass(g, blob, 'm-msg'); else await savePass(g, blob, 'm-msg');
-      } catch (err) { say('m-msg', 'Could not draw this pass. Reload the page and try again.', 'bad'); }
+      btn.disabled = true;
+      await sendPass(act, g, null, 'm-msg');
       if (btn.isConnected) btn.disabled = false;
       return;
     }
@@ -2152,7 +2162,8 @@ dialog.pass::backdrop{background:var(--veil)}
   async function drawPass(g){
     try {
       await Promise.race([Promise.all([
-        document.fonts.load(face('normal', 400, 21, PLAY), g.name), document.fonts.load(face('italic', 400, 10.5, PLAY), 'This pass admits'),
+        document.fonts.load(face('normal', 400, 21, PLAY), g.name), document.fonts.load(face('italic', 400, 10.5, PLAY), 'This pass admits only'),
+        document.fonts.load(face('normal', 600, 6.3, JOST), 'It admits only one person.'),
         document.fonts.load(face('normal', 400, 6, JOST), 'A'), document.fonts.load(face('normal', 500, 6, JOST), 'A'),
         document.fonts.load('400 168px ' + PLAY, coupleLine('&').toUpperCase() + ' 0123456789')]), sleep(4000)]);
     } catch (e) {}
@@ -2171,7 +2182,7 @@ dialog.pass::backdrop{background:var(--veil)}
     if (crest) ctx.drawImage(crest, (PW - cw) / 2, up(141.5), cw, ch);
     else if (cfg.name1) drawCrest(ctx, (PW - cw) / 2, up(141.5), cw, C.wine);
     if (cfg.type) spacedFit(ctx, cfg.type.toUpperCase(), 108, 500, 6.6, C.wine, 2.3, 80);
-    centred(ctx, 'This pass admits', 101.2, face('italic', 400, 10.5, PLAY), C.wine);
+    centred(ctx, 'This pass admits only', 101.2, face('italic', 400, 10.5, PLAY), C.wine);
 
     // the name: one line if it fits, otherwise two balanced lines
     var maxW = 80 * MM, lines = [g.name], size = 0;
@@ -2206,7 +2217,13 @@ dialog.pass::backdrop{background:var(--veil)}
     }
     spaced(ctx, 'ENTRY CODE', 33.6, face('normal', 500, 5.8, JOST), C.muted, 2.0);
     spaced(ctx, g.code, 28.0, face('normal', 500, 13.5, JOST), C.ink, 2.4);
-    centred(ctx, 'Show this code at the entrance. It admits one person, once.', 23.2, face('normal', 400, 6.3, JOST), C.muted);
+    // the note under the code, its second sentence in bold
+    var noteA = 'Show this code at the entrance. ', noteB = 'It admits only one person.';
+    var fA = face('normal', 400, 6.3, JOST), fB = face('normal', 600, 6.3, JOST);
+    ctx.font = fA; var wA = ctx.measureText(noteA).width; ctx.font = fB; var wB = ctx.measureText(noteB).width;
+    var nx = (PW - wA - wB) / 2; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.font = fA; ctx.fillStyle = C.muted; ctx.fillText(noteA, nx, up(23.2));
+    ctx.font = fB; ctx.fillText(noteB, nx + wA, up(23.2));
 
     // read the finished pass back before anyone is handed it
     var check = ctx.getImageData(Math.round(x0), Math.round(y0), Math.round(side), Math.round(side));
@@ -2214,13 +2231,69 @@ dialog.pass::backdrop{background:var(--veil)}
     if (!hit || hit.data !== g.code) throw new Error('unreadable');
     return c;
   }
-  async function passBlob(g){
-    var canvas = await drawPass(g);
-    return await new Promise(function(res, rej){ canvas.toBlob(function(b){ b ? res(b) : rej(new Error('blob')); }, 'image/png'); });
+  function canvasBlob(canvas, type, quality){
+    return new Promise(function(res, rej){ canvas.toBlob(function(b){ b ? res(b) : rej(new Error('blob')); }, type, quality); });
   }
-  async function savePass(g, blob, msgId){
+  async function passBlob(g){ return await canvasBlob(await drawPass(g), 'image/png'); }
+  // A one-page PDF the size of the pass (100 x 150 mm) holding the pass picture, built here with no extra library.
+  async function passPdf(canvas, title){
+    var jpg = new Uint8Array(await (await canvasBlob(canvas, 'image/jpeg', 0.95)).arrayBuffer());
+    var w = (100 * 72 / 25.4).toFixed(2), h = (150 * 72 / 25.4).toFixed(2);
+    var safe = String(title || '').replace(/[^\x20-\x7e]/g, '').replace(/([\\()])/g, '\\$1');
+    var draw = 'q ' + w + ' 0 0 ' + h + ' 0 0 cm /Im0 Do Q';
+    var parts = [], size = 0, offsets = [];
+    function add(x){ var b = typeof x === 'string' ? new TextEncoder().encode(x) : x; parts.push(b); size += b.length; }
+    function obj(n, body){ offsets[n] = size; add(n + ' 0 obj\n' + body + '\nendobj\n'); }
+    add('%PDF-1.4\n%\xe2\xe3\xcf\xd3\n');
+    obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+    obj(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+    obj(3, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + w + ' ' + h + '] /Resources << /XObject << /Im0 5 0 R >> >> /Contents 4 0 R >>');
+    obj(4, '<< /Length ' + draw.length + ' >>\nstream\n' + draw + '\nendstream');
+    offsets[5] = size;
+    add('5 0 obj\n<< /Type /XObject /Subtype /Image /Width ' + canvas.width + ' /Height ' + canvas.height + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + jpg.length + ' >>\nstream\n');
+    add(jpg); add('\nendstream\nendobj\n');
+    obj(6, '<< /Title (' + safe + ') /Producer (Welcome Desk) >>');
+    var xref = size, table = 'xref\n0 7\n0000000000 65535 f \n';
+    for (var i = 1; i <= 6; i++) table += ('000000000' + offsets[i]).slice(-10) + ' 00000 n \n';
+    add(table + 'trailer\n<< /Size 7 /Root 1 0 R /Info 6 0 R >>\nstartxref\n' + xref + '\n%%EOF\n');
+    return new Blob(parts, {type: 'application/pdf'});
+  }
+  // Download and Share first ask which kind of file: a PNG picture or a PDF.
+  var fmtWait = null;
+  function askFormat(verb, name){
+    var dlg = $('fmt-dialog');
+    if (fmtWait) fmtWait(null);
+    $('fmt-title').textContent = verb + ' the pass for ' + name;
+    if (dlg.showModal) { try { dlg.showModal(); } catch (e) { dlg.setAttribute('open', ''); } } else dlg.setAttribute('open', '');
+    return new Promise(function(res){ fmtWait = res; });
+  }
+  function closeFormat(choice){
+    var dlg = $('fmt-dialog'), done = fmtWait; fmtWait = null;
+    if (dlg.open) { if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); }
+    if (done) done(choice);
+  }
+  $('fmt-png').addEventListener('click', function(){ closeFormat('png'); });
+  $('fmt-pdf').addEventListener('click', function(){ closeFormat('pdf'); });
+  $('fmt-close').addEventListener('click', function(){ closeFormat(null); });
+  $('fmt-dialog').addEventListener('close', function(){ if (fmtWait) closeFormat(null); });
+  // asks PNG or PDF, then saves or shares the pass; canvas is the drawn pass when it is already on screen
+  async function sendPass(act, g, canvas, msgId){
+    var kind = await askFormat(act === 'share' ? 'Share' : 'Download', g.name);
+    if (!kind) return;
+    if (!canvas) {
+      if (!window.qrcode || !window.jsQR) { say(msgId, 'The pass maker did not load. Check the signal and reload the page.', 'bad'); return; }
+      say(msgId, 'Drawing the pass for ' + g.name + '.');
+    }
+    var blob;
+    try {
+      canvas = canvas || await drawPass(g);
+      blob = kind === 'pdf' ? await passPdf(canvas, cfg.type + ' pass for ' + g.name) : await canvasBlob(canvas, 'image/png');
+    } catch (err) { say(msgId, 'Could not draw this pass. Reload the page and try again.', 'bad'); return; }
+    if (act === 'share') await sharePass(g, blob, msgId, kind); else await savePass(g, blob, msgId, kind);
+  }
+  async function savePass(g, blob, msgId, kind){
     if (!saver) { say(msgId, 'This device cannot save files from here. Tap the QR code, then press and hold the picture to save it.', 'bad'); return false; }
-    try { await saver.save({filename: fileName(g), data: blob}); say(msgId, 'Saved the pass for ' + g.name + '.', 'good'); return true; }
+    try { await saver.save({filename: fileName(g, kind), data: blob}); say(msgId, 'Saved the pass for ' + g.name + (kind === 'pdf' ? ' as a PDF.' : ' as a picture.'), 'good'); return true; }
     catch (err) {
       if (err && err.code === 'declined') say(msgId, 'Not saved.');
       else if (err && err.code === 'rate_limited') say(msgId, 'A save is already waiting for your answer.', 'bad');
@@ -2228,18 +2301,18 @@ dialog.pass::backdrop{background:var(--veil)}
       return false;
     }
   }
-  async function sharePass(g, blob, msgId){
+  async function sharePass(g, blob, msgId, kind){
     var file = null, can = false;
-    try { file = new File([blob], fileName(g), {type: 'image/png'}); } catch (e) {}
+    try { file = new File([blob], fileName(g, kind), {type: kind === 'pdf' ? 'application/pdf' : 'image/png'}); } catch (e) {}
     try { can = !!file && !!navigator.share && !!navigator.canShare && navigator.canShare({files: [file]}); } catch (e) {}
     if (can) {
       try { await navigator.share({files: [file], title: cfg.type + ' pass for ' + g.name}); say(msgId, 'Shared the pass for ' + g.name + '.', 'good'); return; }
       catch (err) { if (err && err.name === 'AbortError') { say(msgId, 'Not shared.'); return; } }
     }
     // where this page is not allowed to open the share sheet itself, hand the file over to be saved or shared from there
-    if (await savePass(g, blob, msgId)) say(msgId, 'The pass for ' + g.name + ' was saved. Share it from your photos or files.', 'good');
+    if (await savePass(g, blob, msgId, kind)) say(msgId, 'The pass for ' + g.name + ' was saved. Share it from your photos or files.', 'good');
   }
-  function fileName(g){ return ('00' + g.no).slice(-3) + ' ' + g.name.replace(/[^A-Za-z0-9 '\-]/g, '').trim() + '.png'; }
+  function fileName(g, kind){ return ('00' + g.no).slice(-3) + ' ' + g.name.replace(/[^A-Za-z0-9 '\-]/g, '').trim() + (kind === 'pdf' ? '.pdf' : '.png'); }
   async function openPass(g){
     var dlg = $('pass-dialog');
     closePass();
@@ -2251,9 +2324,9 @@ dialog.pass::backdrop{background:var(--veil)}
     if (dlg.showModal) { try { dlg.showModal(); } catch (e) { dlg.setAttribute('open', ''); } } else dlg.setAttribute('open', '');
     if (!window.qrcode || !window.jsQR) { say('pass-msg', 'The pass maker did not load. Check the signal and reload the page.', 'bad'); return; }
     try {
-      var blob = await passBlob(g);
+      var canvas = await drawPass(g), blob = await canvasBlob(canvas, 'image/png');
       var url = URL.createObjectURL(blob);
-      passOpen = {guest: g, blob: blob, url: url};
+      passOpen = {guest: g, blob: blob, url: url, canvas: canvas};
       $('pass-img').src = url;
       $('pass-save').disabled = false; $('pass-share').disabled = false;
       say('pass-msg', 'Entry code ' + g.code + '. This pass works at the door as soon as you send it.');
@@ -2268,8 +2341,8 @@ dialog.pass::backdrop{background:var(--veil)}
   }
   $('pass-close').addEventListener('click', closePass);
   $('pass-dialog').addEventListener('close', function(){ if (passOpen) { try { URL.revokeObjectURL(passOpen.url); } catch (e) {} passOpen = null; } });
-  $('pass-save').addEventListener('click', async function(){ if (passOpen) await savePass(passOpen.guest, passOpen.blob, 'pass-msg'); });
-  $('pass-share').addEventListener('click', async function(){ if (passOpen) await sharePass(passOpen.guest, passOpen.blob, 'pass-msg'); });
+  $('pass-save').addEventListener('click', async function(){ if (passOpen) await sendPass('download', passOpen.guest, passOpen.canvas, 'pass-msg'); });
+  $('pass-share').addEventListener('click', async function(){ if (passOpen) await sendPass('share', passOpen.guest, passOpen.canvas, 'pass-msg'); });
 
   /* ---------- the whole list: download, clear a test run ---------- */
   function cell(v){
