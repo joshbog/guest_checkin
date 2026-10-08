@@ -141,7 +141,18 @@ button,input,select{font:inherit;color:inherit}
 .cam video{display:block;width:100%;height:100%;object-fit:cover}
 .reticle{position:absolute;left:50%;top:50%;width:min(58%,300px);aspect-ratio:1;translate:-50% -50%;border:2px solid var(--on-cam);opacity:.9;pointer-events:none}
 .scan-acts{display:grid;gap:10px;justify-items:center}
-.who{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;font-size:.92rem;color:var(--muted);overflow-wrap:anywhere}
+/* the header menu: who is signed in, where to go, sign out */
+.menu{position:relative;flex:none;align-self:center}
+.menu-btn .i-shut,.menu-btn[aria-expanded="true"] .i-open{display:none}
+.menu-btn[aria-expanded="true"] .i-shut{display:block}
+.menu-panel{position:absolute;right:0;top:calc(100% + 8px);z-index:30;width:max-content;min-width:240px;max-width:calc(100vw - 32px);display:grid;
+  background:var(--banner);border:1px solid var(--accent);box-shadow:0 14px 30px -14px var(--shadow)}
+.menu-who{display:grid;gap:3px;padding:14px 16px;border-bottom:1px solid var(--line);font-size:.95rem;color:var(--ink);overflow-wrap:anywhere}
+.menu-label{font:500 .68rem/1.3 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.menu-item{display:block;width:100%;text-align:left;padding:15px 16px;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;
+  color:var(--accent);font:500 .78rem/1.2 var(--body);letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
+.menu-panel > :last-child{border-bottom:0}
+.menu-item:hover,.menu-item:focus-visible{background:var(--tab-on);outline:none}
 .staff{display:grid;width:100%}
 .staff li{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 14px;padding-block:10px;border-bottom:1px solid var(--line)}
 .staff .s-mail{min-width:0;overflow-wrap:anywhere}
@@ -291,12 +302,19 @@ dialog.pass::backdrop{background:var(--veil)}
     <div class="mast-text">
       <p class="eyebrow" id="mast-type">Event</p>
       <h1 id="page-title">Guest check-in</h1>
-      <p class="who" id="who" hidden><span id="who-email"></span><button class="link" type="button" id="signout">Sign out</button></p>
     </div>
-    <div class="row">
-      <button class="btn ghost small" type="button" id="switch" hidden>Manage guests</button>
-      <button class="btn ghost small" type="button" id="open-settings" hidden>Settings</button>
-    </div>
+    <nav class="menu" id="menu" aria-label="Menu">
+      <button class="icon-btn menu-btn" type="button" id="menu-btn" aria-label="Menu" aria-expanded="false" aria-controls="menu-panel" hidden>
+        <svg class="i-open" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false"><path d="M3 5.5h14M3 10h14M3 14.5h14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg>
+        <svg class="i-shut" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false"><path d="M4 4 16 16M16 4 4 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg>
+      </button>
+      <div class="menu-panel" id="menu-panel" hidden>
+        <p class="menu-who" id="who" hidden><span class="menu-label">Signed in as</span><span id="who-email"></span></p>
+        <button class="menu-item" type="button" id="switch" hidden>Manage guests</button>
+        <button class="menu-item" type="button" id="open-settings" hidden>Settings</button>
+        <button class="menu-item" type="button" id="signout" hidden>Sign out</button>
+      </div>
+    </nav>
   </div>
   <div class="carpet" id="carpet">
     <ul class="wrap">
@@ -891,6 +909,20 @@ dialog.pass::backdrop{background:var(--veil)}
         : 'Sign-in did not work. Check the signal and try again.';
     }
   });
+  /* ================= the header menu ================= */
+  // The menu button shows only when the menu has something in it, so a signed-out phone sees none.
+  function menuHasItems(){ return ['who', 'switch', 'open-settings', 'signout'].some(function(id){ return !$(id).hidden; }); }
+  function openMenu(){ if ($('menu-panel').hidden) { $('menu-panel').hidden = false; $('menu-btn').setAttribute('aria-expanded', 'true'); } }
+  function closeMenu(){ if (!$('menu-panel').hidden) { $('menu-panel').hidden = true; $('menu-btn').setAttribute('aria-expanded', 'false'); } }
+  function syncMenu(){ var none = !menuHasItems(); if ($('menu-btn').hidden !== none) $('menu-btn').hidden = none; if (none) closeMenu(); }
+  new MutationObserver(function(recs){
+    if (recs.some(function(r){ return r.target !== $('menu-panel'); })) syncMenu();
+  }).observe($('menu-panel'), {subtree: true, attributes: true, attributeFilter: ['hidden']});
+  $('menu-btn').addEventListener('click', function(){ if ($('menu-panel').hidden) openMenu(); else closeMenu(); });
+  $('menu-panel').addEventListener('click', function(e){ if (e.target.closest && e.target.closest('.menu-item')) closeMenu(); });
+  document.addEventListener('click', function(e){ if (!$('menu').contains(e.target)) closeMenu(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !$('menu-panel').hidden) { closeMenu(); $('menu-btn').focus(); } });
+
   $('signout').addEventListener('click', async function(){ stopCamera(); try { await window.site.signOut(); } catch (e) {} location.reload(); });
 
   /* ---------- a crest drawn from the names and date, in the style of the original ---------- */
@@ -2206,7 +2238,7 @@ dialog.pass::backdrop{background:var(--veil)}
     }
     if (!db) { shut(); showSignIn(); return; }
     myEmail = who.email || '';
-    $('who-email').textContent = myEmail; $('who').hidden = false;
+    $('who-email').textContent = myEmail; $('who').hidden = false; $('signout').hidden = false;
     try { isOwner = await user.isOwner(); } catch (e) {}
     try { canWrite = (await user.can('data.write')) !== false; } catch (e) {}
     if (!isOwner && !canWrite) {
