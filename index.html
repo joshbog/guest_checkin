@@ -303,6 +303,19 @@ dialog.pass::backdrop{background:var(--veil)}
 .swatch[aria-pressed="true"] .sw-name small{visibility:visible}
 .swatch:disabled{cursor:default;opacity:.75}
 .lock-form{display:grid;gap:12px;justify-items:start}
+/* the passcode on/off switch */
+.lock-switch{display:flex;align-items:center;justify-content:space-between;gap:20px;max-width:34rem;padding:16px;border:1px solid var(--line);background:var(--banner)}
+.ls-text{display:grid;gap:4px;min-width:0}
+.ls-title{font-weight:500;color:var(--ink)}
+.ls-note{font-size:.92rem;color:var(--muted)}
+.switch{flex:none;position:relative;width:56px;height:32px;padding:0;border:1px solid var(--accent);border-radius:0;background:var(--paper);cursor:pointer;transition:background .2s}
+.switch span{position:absolute;top:3px;left:3px;width:24px;height:24px;background:var(--accent);transition:transform .2s cubic-bezier(.2,.8,.2,1),background .2s}
+.switch[aria-checked="true"]{background:var(--accent)}
+.switch[aria-checked="true"] span{transform:translateX(24px);background:var(--on-wine)}
+.switch:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.switch:disabled{opacity:.5;cursor:wait}
+.lock-off{max-width:34rem}
+@media (prefers-reduced-motion:reduce){.switch,.switch span{transition:none}}
 .lock-form .field{flex:0 1 13rem}
 @media (prefers-reduced-motion:reduce){.verdict.busy .v-mark{animation:none}}
 </style>
@@ -607,6 +620,24 @@ dialog.pass::backdrop{background:var(--veil)}
       <h2>Passcode</h2>
       <p id="lock-state">Manage guests opens with a 6-digit passcode.</p>
     </header>
+    <div class="lock-switch" id="lock-switch" hidden>
+      <div class="ls-text">
+        <p class="ls-title" id="lock-switch-label">Ask for the passcode</p>
+        <p class="ls-note" id="lock-switch-note">When on, Manage guests asks for it every time it is opened.</p>
+      </div>
+      <button class="switch" type="button" role="switch" id="lock-toggle" aria-checked="true" aria-labelledby="lock-switch-label"><span></span></button>
+    </div>
+    <form class="m-form lock-off" id="lock-off-form" novalidate hidden>
+      <p>Enter your current passcode to turn it off. Anyone using an organiser's phone will then be able to open Manage guests.</p>
+      <div class="field">
+        <label class="label" for="lock-off-pin">Current passcode</label>
+        <input class="text-in pin" id="lock-off-pin" type="text" inputmode="numeric" autocorrect="off" spellcheck="false" pattern="[0-9]*" maxlength="6" autocomplete="off">
+      </div>
+      <div class="row">
+        <button class="btn small" type="submit" id="lock-off-go">Turn off</button>
+        <button class="btn ghost small" type="button" id="lock-off-cancel">Keep it on</button>
+      </div>
+    </form>
     <form class="lock-form" id="lock-form" novalidate hidden>
       <div class="row">
         <div class="field" id="lock-old-field" hidden>
@@ -2040,7 +2071,7 @@ dialog.pass::backdrop{background:var(--veil)}
   async function readLock(){
     var snap = await db.doc('settings/manager').get();
     var d = snap.exists ? snap.data() : null;
-    lock = d && d.salt && d.hash ? {salt: String(d.salt), hash: String(d.hash), rounds: Number(d.rounds) || ROUNDS} : null;
+    lock = d && d.salt && d.hash ? {salt: String(d.salt), hash: String(d.hash), rounds: Number(d.rounds) || ROUNDS, off: d.off === true} : null;
     return lock;
   }
   function waitLeft(){ return Math.max(0, Math.ceil((lockedUntil - Date.now()) / 1000)); }
@@ -2057,8 +2088,8 @@ dialog.pass::backdrop{background:var(--veil)}
     if (!isOwner) { openGate(canWrite ? 'Only an organiser can manage guests. This account can scan passes at the door.' : 'This account has not been invited to this guest list.', '', false); return; }
     if (!window.crypto || !crypto.subtle) { openGate('This browser cannot check a passcode. Open the page in an up-to-date browser.', 'bad', false); return; }
     try { await readLock(); } catch (e) { openGate('Could not reach the guest list. Check the signal and try again.', 'bad', false); return; }
-    if (!lock) {
-      // No passcode yet: the couple's own account goes straight in and is asked to set one.
+    if (!lock || lock.off) {
+      // No passcode yet, or turned off in Settings: an organiser goes straight in.
       if (isOwner) { enterManager(); return; }
       enterManager();
       return;
@@ -2091,7 +2122,7 @@ dialog.pass::backdrop{background:var(--veil)}
     unlocked = true; setMode('admin'); renderLock(); window.scrollTo(0, 0);
     if (wantTab) { var go = wantTab; wantTab = ''; openSettings(go); }
   }
-  function clearPins(){ ['lock-old', 'lock-new', 'lock-again', 'ci-new', 'ci-again'].forEach(function(id){ $(id).value = ''; }); }
+  function clearPins(){ ['lock-old', 'lock-new', 'lock-again', 'ci-new', 'ci-again', 'lock-off-pin'].forEach(function(id){ $(id).value = ''; }); $('lock-off-form').hidden = true; }
   function leaveManager(){
     // going back to the door locks the manager and its settings again
     unlocked = false; rowState = null; closePass(); clearPins();
@@ -2146,7 +2177,7 @@ dialog.pass::backdrop{background:var(--veil)}
     e.preventDefault(); showTab(next); $('tab-' + next).focus();
   });
 
-  ['lock-old', 'lock-new', 'lock-again', 'gate-pin', 'ci-new', 'ci-again', 'ci-pin'].forEach(function(id){
+  ['lock-old', 'lock-new', 'lock-again', 'gate-pin', 'ci-new', 'ci-again', 'ci-pin', 'lock-off-pin'].forEach(function(id){
     $(id).addEventListener('input', function(e){ var d = e.target.value.replace(/[^0-9]/g, '').slice(0, 6); if (d !== e.target.value) e.target.value = d; });
   });
   $('open-settings').addEventListener('click', function(){ openSettings('event'); });
@@ -2159,8 +2190,13 @@ dialog.pass::backdrop{background:var(--veil)}
     $('lock-old-field').hidden = !lock;
     $('lock-go').textContent = lock ? 'Change passcode' : 'Set passcode';
     $('lock-state').textContent = !isOwner ? 'Manage guests opens with a 6-digit passcode. Only an organiser can change it.'
+      : lock && lock.off ? 'The passcode is off, so Manage guests opens without it. Turn it back on below whenever you like.'
       : lock ? 'Manage guests asks for your 6-digit passcode every time it is opened. Going back to the door locks it again.'
       : 'No passcode yet. Choose 6 digits; you will be asked for them each time Manage guests is opened.';
+    $('lock-switch').hidden = !(isOwner && lock);
+    $('lock-toggle').setAttribute('aria-checked', String(!!(lock && !lock.off)));
+    $('lock-switch-note').textContent = lock && lock.off ? 'Off: Manage guests opens without the passcode.' : 'On: Manage guests asks for it every time it is opened.';
+    if (!lock || lock.off) { $('lock-off-form').hidden = true; $('lock-off-pin').value = ''; }
     $('lock-state').className = 'hint';
   }
   $('lock-form').addEventListener('submit', async function(e){
@@ -2173,16 +2209,51 @@ dialog.pass::backdrop{background:var(--veil)}
     try {
       if (lock && !(await matchesLock(old))) { say('lock-msg', 'The current passcode is wrong.', 'bad'); $('lock-go').disabled = false; return; }
       var salt = new Uint8Array(16); crypto.getRandomValues(salt);
+      var wasOff = !!(lock && lock.off);
       var rec = {salt: hex(salt), hash: await fingerprint(pin, hex(salt), ROUNDS), rounds: ROUNDS, setAt: Date.now()};
       await db.doc('settings/manager').set(rec);
-      lock = {salt: rec.salt, hash: rec.hash, rounds: rec.rounds};
+      lock = {salt: rec.salt, hash: rec.hash, rounds: rec.rounds, off: false};
       ['lock-old', 'lock-new', 'lock-again'].forEach(function(id){ $(id).value = ''; });
       renderLock();
-      say('lock-msg', 'Passcode saved. You will be asked for it the next time you open Manage guests.', 'good');
+      say('lock-msg', 'Passcode saved' + (wasOff ? ' and turned on' : '') + '. You will be asked for it the next time you open Manage guests.', 'good');
     } catch (err) {
       say('lock-msg', 'Could not save the passcode. Check the signal and try again.', 'bad');
     }
     $('lock-go').disabled = false;
+  });
+
+  /* ---------- turning the passcode off and on ---------- */
+  // Turning it off asks for the current passcode, like changing it; turning it back on needs nothing.
+  async function saveLockOff(off){
+    var rec = {salt: lock.salt, hash: lock.hash, rounds: lock.rounds, off: off, setAt: Date.now()};
+    await db.doc('settings/manager').set(rec);
+    lock.off = off;
+  }
+  $('lock-toggle').addEventListener('click', async function(){
+    if (!db || !isOwner || !lock) return;
+    if (!lock.off) {   // on: ask for the passcode before turning it off
+      var showing = !$('lock-off-form').hidden;
+      $('lock-off-form').hidden = showing; say('lock-msg', '');
+      if (!showing) $('lock-off-pin').focus();
+      return;
+    }
+    $('lock-toggle').disabled = true;
+    try { await saveLockOff(false); renderLock(); say('lock-msg', 'The passcode is on again. Manage guests will ask for it next time.', 'good'); }
+    catch (err) { say('lock-msg', 'Could not turn the passcode on. Check the signal and try again.', 'bad'); }
+    $('lock-toggle').disabled = false;
+  });
+  $('lock-off-cancel').addEventListener('click', function(){ $('lock-off-form').hidden = true; $('lock-off-pin').value = ''; say('lock-msg', ''); });
+  $('lock-off-form').addEventListener('submit', async function(e){
+    e.preventDefault();
+    if (!db || !isOwner || !lock) return;
+    var pin = $('lock-off-pin').value.trim();
+    if (!/^[0-9]{6}$/.test(pin)) { say('lock-msg', 'The passcode is 6 digits.', 'bad'); return; }
+    $('lock-off-go').disabled = true;
+    try {
+      if (!(await matchesLock(pin))) { say('lock-msg', 'That passcode is wrong.', 'bad'); $('lock-off-pin').value = ''; }
+      else { await saveLockOff(true); renderLock(); say('lock-msg', 'The passcode is off. Manage guests now opens without it.', 'good'); }
+    } catch (err) { say('lock-msg', 'Could not turn the passcode off. Check the signal and try again.', 'bad'); }
+    $('lock-off-go').disabled = false;
   });
 
   /* ================= the check-in code: checking a guest in from the list, without a pass ================= */
