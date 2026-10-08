@@ -178,7 +178,11 @@ button,input,select{font:inherit;color:inherit}
 @media (prefers-reduced-motion:reduce){.menu-panel,.menu-panel.closing,.menu-anim,.menu-panel.closing .menu-anim{animation:none}}
 .staff{display:grid;width:100%}
 .staff li{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 14px;padding-block:10px;border-bottom:1px solid var(--line)}
-.staff .s-mail{min-width:0;overflow-wrap:anywhere}
+.staff .s-who{display:grid;gap:2px;min-width:0}
+.staff .s-name{font:400 1.15rem/1.25 var(--display);color:var(--ink);overflow-wrap:anywhere}
+.staff .s-name.none{font:italic 400 1rem/1.25 var(--body);color:var(--muted)}
+.staff .s-mail{min-width:0;overflow-wrap:anywhere;font-size:.9rem;color:var(--muted)}
+.staff .s-rename{flex:1 1 100%;margin-top:6px}
 .staff .s-meta{display:flex;align-items:baseline;gap:14px;color:var(--muted);font-size:.92rem}
 .typed{display:grid;gap:8px}
 .typed .text-in{flex:1 1 11rem;width:auto;font-weight:500;font-size:1.1rem;letter-spacing:.18em;text-transform:uppercase}
@@ -615,12 +619,16 @@ dialog.pass::backdrop{background:var(--veil)}
   <section class="s-panel" id="staff-box" role="tabpanel" aria-labelledby="tab-people" hidden>
     <header class="s-head">
       <h2>People</h2>
-      <p>Everyone signs in with their own Google account. A door helper can only scan passes. An organiser can also manage guests and change these settings.</p>
+      <p>Everyone signs in with their own Google account. A door helper can only scan passes. An organiser can also manage guests and change these settings. Each person's name shows beside the guests they check in.</p>
     </header>
     <ul class="staff" id="staff-rows"></ul>
     <form class="event-form s-card" id="staff-form" novalidate>
       <h3 class="s-sub">Add a person</h3>
       <div class="row">
+        <div class="field grow">
+          <label class="label" for="staff-name">Name</label>
+          <input class="text-in" id="staff-name" type="text" maxlength="60" autocomplete="off" placeholder="For example Tolu">
+        </div>
         <div class="field grow">
           <label class="label" for="staff-email">Gmail address</label>
           <input class="text-in" id="staff-email" type="email" inputmode="email" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="name@gmail.com">
@@ -932,30 +940,72 @@ dialog.pass::backdrop{background:var(--veil)}
   });
 
   /* ---------- people who can sign in: organisers and door helpers ---------- */
+  var staffEdit = '';   // the person whose name is being changed
   function renderStaff(){
     var rows = $('staff-rows'); rows.textContent = '';
+    if (staffEdit && !staff.some(function(s){ return s.email === staffEdit; })) staffEdit = '';
     staff.forEach(function(s){
       var li = el('li'); li.dataset.email = s.email;
-      li.appendChild(el('span', 's-mail', s.email));
+      var who = el('span', 's-who');
+      who.appendChild(el('span', 's-name' + (s.name ? '' : ' none'), s.name || 'No name yet'));
+      who.appendChild(el('span', 's-mail', s.email));
+      li.appendChild(who);
       var meta = el('span', 's-meta');
       meta.appendChild(el('span', '', (s.role === 'organiser' ? 'Organiser' : 'Door helper') + (s.email === myEmail ? ' · you' : '')));
+      var rn = el('button', 'link', s.name ? 'Rename' : 'Add name'); rn.type = 'button'; rn.dataset.act = 'staff-rename'; meta.appendChild(rn);
       if (s.email !== myEmail) { var b = el('button', 'link danger', 'Remove'); b.type = 'button'; b.dataset.act = 'staff-remove'; meta.appendChild(b); }
-      li.appendChild(meta); rows.appendChild(li);
+      li.appendChild(meta);
+      if (staffEdit === s.email) {
+        var f = el('form', 'm-form s-rename'); f.noValidate = true; f.dataset.form = 'staff-rename';
+        var lab = el('label', 'label', 'Name'); lab.htmlFor = 'staff-rename';
+        var inp = el('input', 'text-in'); inp.id = 'staff-rename'; inp.type = 'text'; inp.maxLength = 60; inp.autocomplete = 'off'; inp.value = s.name;
+        var r = el('div', 'row');
+        var save = el('button', 'btn small', 'Save name'); save.type = 'submit';
+        var cancel = el('button', 'btn ghost small', 'Cancel'); cancel.type = 'button'; cancel.dataset.act = 'staff-rename-cancel';
+        r.appendChild(save); r.appendChild(cancel);
+        f.appendChild(lab); f.appendChild(inp); f.appendChild(r); li.appendChild(f);
+      }
+      rows.appendChild(li);
     });
   }
   $('staff-form').addEventListener('submit', async function(e){
     e.preventDefault();
     if (!db || !isOwner) return;
-    var email = $('staff-email').value.trim().toLowerCase(), role = $('staff-role').value === 'organiser' ? 'organiser' : 'door';
+    var email = $('staff-email').value.trim().toLowerCase(), role = $('staff-role').value === 'organiser' ? 'organiser' : 'door', name = tidy($('staff-name').value);
+    if (!name) { say('staff-msg', 'Add their name, so you can see who checked each guest in.', 'bad'); $('staff-name').focus(); return; }
     if (!/^[^\s@\/]+@[^\s@\/]+\.[^\s@\/]+$/.test(email) || email.length > 120) { say('staff-msg', 'Type the full Google address, for example name@gmail.com.', 'bad'); $('staff-email').focus(); return; }
     if (email === myEmail) { say('staff-msg', 'That is your own account. You are already an organiser.', 'bad'); return; }
     $('staff-go').disabled = true;
     try {
-      await db.collection('staff').doc(email).set({role: role, addedAt: Date.now()});
-      $('staff-email').value = '';
-      say('staff-msg', email + ' can now sign in ' + (role === 'organiser' ? 'as an organiser.' : 'to scan passes at the door.'), 'good');
+      await db.collection('staff').doc(email).set({role: role, name: name, addedAt: Date.now()});
+      $('staff-email').value = ''; $('staff-name').value = '';
+      say('staff-msg', name + ' can now sign in with ' + email + (role === 'organiser' ? ' as an organiser.' : ' to scan passes at the door.'), 'good');
     } catch (err) { say('staff-msg', 'Could not add that person. Check the signal and try again.', 'bad'); }
     $('staff-go').disabled = false;
+  });
+  $('staff-rows').addEventListener('click', function(e){
+    var act = e.target.closest ? e.target.closest('[data-act="staff-rename"], [data-act="staff-rename-cancel"]') : null;
+    if (!act || !isOwner) return;
+    staffEdit = act.dataset.act === 'staff-rename' ? act.closest('li').dataset.email : '';
+    renderStaff();
+    if (staffEdit && $('staff-rename')) { $('staff-rename').focus(); $('staff-rename').select(); }
+  });
+  $('staff-rows').addEventListener('submit', async function(e){
+    e.preventDefault();
+    if (!db || !isOwner || !staffEdit) return;
+    var email = staffEdit, name = tidy($('staff-rename').value), btn = e.target.querySelector('[type="submit"]');
+    if (!name) { say('staff-msg', 'Type a name.', 'bad'); return; }
+    btn.disabled = true;
+    try {
+      await db.collection('staff').doc(email).update({name: name});
+      staffEdit = ''; say('staff-msg', 'Saved. ' + name + "'s name now shows beside the guests they check in.", 'good');
+      renderStaff();
+    } catch (err) {
+      btn.disabled = false;
+      say('staff-msg', email === myEmail
+        ? 'Could not save your own name. The database rules need updating first; see the note on publishing the rules.'
+        : 'Could not save the name. Check the signal and try again.', 'bad');
+    }
   });
   $('staff-rows').addEventListener('click', async function(e){
     var btn = e.target.closest ? e.target.closest('[data-act="staff-remove"]') : null;
@@ -1116,10 +1166,13 @@ dialog.pass::backdrop{background:var(--veil)}
   function showReady(){ show('idle', 'Ready', "Scan a guest's pass", cam.on ? "Hold the next guest's QR code in front of the camera." : "Tap Scan a pass and hold the guest's QR code in front of the camera."); }
   $('v-close').addEventListener('click', function(){ if (!busy) showReady(); });
   function showGuest(kind, g){
-    if (kind === 'ok') show('ok', 'Admit', g.name, g.list + ' · checked in at ' + clock(g.checkedInAt));
+    if (kind === 'ok') show('ok', 'Admit', g.name, g.list + ' · checked in at ' + clock(g.checkedInAt) + byLine(g));
     else show('dup', 'Already used · do not admit', g.name,
-      'This pass was checked in at ' + clock(g.checkedInAt) + ' (' + ago(g.checkedInAt) + '). It admits one person, once.');
+      'This pass was checked in at ' + clock(g.checkedInAt) + byLine(g) + ' (' + ago(g.checkedInAt) + '). It admits one person, once.');
   }
+  // Who let a guest in, by the name they go by (from People in Settings, or their Google account); never their email.
+  function byName(g){ return String((g && (g.by || g.checkedInByName)) || '').trim(); }
+  function byLine(g){ var n = byName(g); return n ? ' by ' + n : ''; }
   function showBad(code){
     show('bad', 'Not valid · do not admit', 'Not on the guest list', code ? 'Code read: ' + code : 'That QR code is not a wedding pass.');
   }
@@ -1304,7 +1357,7 @@ dialog.pass::backdrop{background:var(--veil)}
       var li = el('li');
       li.appendChild(el('span', 'r-name', g.name));
       var meta = el('span', 'r-meta');
-      meta.appendChild(el('span', '', g.checkedInAt ? g.list + ' · ' + clock(g.checkedInAt) : g.list));
+      meta.appendChild(el('span', '', g.checkedInAt ? g.list + ' · ' + clock(g.checkedInAt) + (byName(g) ? ' · ' + byName(g) : '') : g.list));
       if (!g.checkedInAt && ciLock && canWrite && db) {
         var go = el('button', 'btn ghost small r-act', 'Check in'); go.type = 'button'; go.dataset.code = g.code;
         go.setAttribute('aria-label', 'Check in ' + g.name);
@@ -1411,7 +1464,7 @@ dialog.pass::backdrop{background:var(--veil)}
       var meta = el('span', 'm-meta', g.list + ' · ');
       meta.appendChild(el('span', 'm-code', g.code));
       main.appendChild(meta);
-      main.appendChild(el('span', 'status' + (g.checkedInAt ? ' in' : ''), g.checkedInAt ? 'Arrived ' + clock(g.checkedInAt) : 'Not arrived'));
+      main.appendChild(el('span', 'status' + (g.checkedInAt ? ' in' : ''), g.checkedInAt ? 'Arrived ' + clock(g.checkedInAt) + byLine(g) : 'Not arrived'));
       li.appendChild(main);
 
       if (picking) {
@@ -1588,7 +1641,7 @@ dialog.pass::backdrop{background:var(--veil)}
       var made = false;
       try {
         // the new code is saved first, then the old one is removed, so the guest is never left without a pass
-        await db.collection('guests').doc(fresh).set({no: g.no, name: g.name, list: g.list, code: fresh, checkedInAt: g.checkedInAt || 0});
+        await db.collection('guests').doc(fresh).set({no: g.no, name: g.name, list: g.list, code: fresh, checkedInAt: g.checkedInAt || 0, checkedInByName: g.checkedInAt ? (g.by || '') : ''});
         made = true;
         await db.collection('guests').doc(code).delete();
         rowState = null;
@@ -1604,7 +1657,7 @@ dialog.pass::backdrop{background:var(--veil)}
     if (act === 'clear') {
       if (!armed(btn, 'Clear check-in')) return;
       btn.disabled = true;
-      try { await db.collection('guests').doc(code).update({checkedInAt: 0}); say('m-msg', g.name + "'s pass is unused again.", 'good'); }
+      try { await db.collection('guests').doc(code).update({checkedInAt: 0, checkedInBy: '', checkedInByName: ''}); say('m-msg', g.name + "'s pass is unused again.", 'good'); }
       catch (err) { say('m-msg', 'Could not clear that check-in. Try again.', 'bad'); renderAdmin(); }
       return;
     }
@@ -2035,9 +2088,9 @@ dialog.pass::backdrop{background:var(--veil)}
   }
   $('csv').addEventListener('click', async function(){
     if (!saver) { say('reset-msg', 'This device cannot save files from here.', 'bad'); return; }
-    var lines = [['No.', 'Guest', 'List', 'Entry code', 'Arrived', 'Arrived at'].join(',')];
+    var lines = [['No.', 'Guest', 'List', 'Entry code', 'Arrived', 'Arrived at', 'Checked in by'].join(',')];
     all().sort(function(a, b){ return a.no - b.no; }).forEach(function(g){
-      lines.push([g.no, g.name, g.list, g.code, g.checkedInAt ? 'Yes' : 'No', g.checkedInAt ? new Date(g.checkedInAt).toLocaleString() : ''].map(cell).join(','));
+      lines.push([g.no, g.name, g.list, g.code, g.checkedInAt ? 'Yes' : 'No', g.checkedInAt ? new Date(g.checkedInAt).toLocaleString() : '', g.checkedInAt ? byName(g) : ''].map(cell).join(','));
     });
     try { await saver.save({filename: (coupleLine('and') + ' guest list').replace(/[^A-Za-z0-9 '\-]/g, '').trim() + '.csv', data: '﻿' + lines.join('\r\n') + '\r\n'}); say('reset-msg', 'Guest list saved.', 'good'); }
     catch (err) { say('reset-msg', err && err.code === 'declined' ? 'Not saved.' : 'Could not save the guest list here.', err && err.code === 'declined' ? '' : 'bad'); }
@@ -2051,7 +2104,7 @@ dialog.pass::backdrop{background:var(--veil)}
     var used = all().filter(function(g){ return g.checkedInAt; }), done = 0, failedN = 0;
     for (var i = 0; i < used.length; i++) {
       say('reset-msg', 'Clearing ' + (i + 1) + ' of ' + used.length + '.');
-      try { await db.collection('guests').doc(used[i].code).update({checkedInAt: 0}); done++; } catch (e) { failedN++; }
+      try { await db.collection('guests').doc(used[i].code).update({checkedInAt: 0, checkedInBy: '', checkedInByName: ''}); done++; } catch (e) { failedN++; }
     }
     say('reset-msg', failedN ? done + ' cleared, ' + failedN + ' could not be cleared. Try again.'
       : done ? 'Cleared ' + done + ' check-in' + (done === 1 ? '' : 's') + '. Every pass is unused again.' : 'There were no check-ins to clear.', failedN ? 'bad' : 'good');
@@ -2409,7 +2462,7 @@ dialog.pass::backdrop{background:var(--veil)}
       applyAll();
     }, function(){});
     if (isOwner) db.collection('staff').onSnapshot(function(snap){
-      staff = snap.docs.map(function(d){ var s = d.data() || {}; return {email: d.id, role: s.role === 'organiser' ? 'organiser' : 'door'}; })
+      staff = snap.docs.map(function(d){ var s = d.data() || {}; return {email: d.id, role: s.role === 'organiser' ? 'organiser' : 'door', name: String(s.name || '').slice(0, 60)}; })
         .sort(function(a, b){ return a.role === b.role ? (a.email < b.email ? -1 : 1) : (a.role === 'organiser' ? -1 : 1); });
       renderStaff();
     }, function(){});
@@ -2419,7 +2472,8 @@ dialog.pass::backdrop{background:var(--veil)}
       guests.clear();
       snap.docs.forEach(function(d){
         var g = d.data(); if (!g || !g.name) return;
-        guests.set(d.id, {code: d.id, name: String(g.name), list: String(g.list || ''), no: Number(g.no) || 0, checkedInAt: Number(g.checkedInAt) || 0});
+        guests.set(d.id, {code: d.id, name: String(g.name), list: String(g.list || ''), no: Number(g.no) || 0, checkedInAt: Number(g.checkedInAt) || 0,
+          by: g.checkedInAt ? String(g.checkedInByName || '').slice(0, 60) : ''});
       });
       loaded = true;
       if (importing) { clearTimeout(paint); paint = setTimeout(render, 300); } else render();

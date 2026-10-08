@@ -4,7 +4,7 @@
 (function(){
   'use strict';
   var config = window.FIREBASE_CONFIG, fb = window.firebase;
-  var state = {configured: false, user: null, email: '', role: null, auth: null, store: null};
+  var state = {configured: false, user: null, email: '', role: null, name: '', staffName: '', auth: null, store: null};
 
   var ready = new Promise(function(resolve){
     if (!config || !fb) { resolve(state); return; }
@@ -19,8 +19,18 @@
       // who may do what is decided by the staff list, and enforced again by the database rules
       try {
         var me = await state.store.collection('staff').doc(state.email).get();
-        if (me.exists) state.role = me.data().role === 'organiser' ? 'organiser' : 'door';
+        if (me.exists) { state.role = me.data().role === 'organiser' ? 'organiser' : 'door'; state.staffName = String(me.data().name || ''); }
       } catch (e) { state.role = null; }
+      // The name recorded beside each check-in: the one given in Settings, People, else the Google account's name.
+      state.name = (state.staffName || user.displayName || '').trim().slice(0, 60);
+      if (state.role) {
+        try {
+          state.store.collection('staff').doc(state.email).onSnapshot(function(s){
+            state.staffName = s.exists ? String(s.data().name || '') : '';
+            state.name = (state.staffName || user.displayName || '').trim().slice(0, 60);
+          }, function(){});
+        } catch (e) {}
+      }
       resolve(state);
     }, function(){ resolve(state); });
   });
@@ -51,17 +61,26 @@
     doc: function(path){ return wrapDoc(state.store.doc(path)); },
     collection: function(path){ return wrapCollection(state.store.collection(path)); },
     // One atomic step: a pass can be admitted once, even if two doors scan it in the same second.
+    // It also records who checked the guest in: their address (checked by the database rules) and their name.
     checkIn: function(code){
       var ref = state.store.collection('guests').doc(code);
-      return state.store.runTransaction(function(tx){
-        return tx.get(ref).then(function(s){
-          if (!s.exists || !s.data().name) return {status: 'missing'};
-          var g = s.data();
-          if (g.checkedInAt) return {status: 'dup', guest: g};
-          var at = Date.now();
-          tx.update(ref, {checkedInAt: at});
-          return {status: 'ok', guest: {name: g.name, list: g.list, checkedInAt: at}};
+      function attempt(withWho){
+        return state.store.runTransaction(function(tx){
+          return tx.get(ref).then(function(s){
+            if (!s.exists || !s.data().name) return {status: 'missing'};
+            var g = s.data();
+            if (g.checkedInAt) return {status: 'dup', guest: g};
+            var at = Date.now(), change = {checkedInAt: at};
+            if (withWho) { change.checkedInBy = state.email; change.checkedInByName = state.name; }
+            tx.update(ref, change);
+            return {status: 'ok', guest: {name: g.name, list: g.list, checkedInAt: at, checkedInByName: withWho ? state.name : ''}};
+          });
         });
+      }
+      // Until the updated rules are published, a door helper may only change the time; the door must keep working.
+      return attempt(true).catch(function(e){
+        if (e && e.code === 'permission-denied') return attempt(false);
+        throw e;
       });
     }
   };

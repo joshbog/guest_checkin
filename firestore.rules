@@ -28,12 +28,17 @@ service cloud.firestore {
       return isStaff() && get(staffPath()).data.role == 'organiser';
     }
 
-    // A door helper may make exactly one kind of change: mark an unused pass as used.
+    // A door helper may make exactly one kind of change: mark an unused pass as used,
+    // saying who did it. The address must be their own; the name is what they go by.
     function onlyChecksIn() {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['checkedInAt'])
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return changed.hasOnly(['checkedInAt', 'checkedInBy', 'checkedInByName'])
         && resource.data.checkedInAt == 0
         && request.resource.data.checkedInAt is number
-        && request.resource.data.checkedInAt > 0;
+        && request.resource.data.checkedInAt > 0
+        && (!changed.hasAny(['checkedInBy']) || request.resource.data.checkedInBy == request.auth.token.email)
+        && (!changed.hasAny(['checkedInByName'])
+            || (request.resource.data.checkedInByName is string && request.resource.data.checkedInByName.size() <= 60));
     }
 
     // One document per guest; the document ID is the entry code printed on their pass.
@@ -49,12 +54,15 @@ service cloud.firestore {
       allow write: if isOrganiser();
     }
 
-    // The people who can sign in. An organiser cannot change or remove their own entry,
-    // so the last organiser can never lock themselves out by mistake.
+    // The people who can sign in. An organiser cannot change their own role or remove their own entry,
+    // so the last organiser can never lock themselves out by mistake; they may change their own name.
     match /staff/{email} {
       allow get: if signedIn() && request.auth.token.email == email;
       allow list: if isOrganiser();
-      allow create, update, delete: if isOrganiser() && request.auth.token.email != email;
+      allow create, delete: if isOrganiser() && request.auth.token.email != email;
+      allow update: if isOrganiser()
+        && (request.auth.token.email != email
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name']));
     }
   }
 }

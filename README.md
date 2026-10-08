@@ -71,6 +71,7 @@ In the Firebase console open **Authentication → Settings → Authorized domain
 - **Add guests** one at a time, or upload an Excel file. A sheet with `Guest name` and `List` columns works; so does one column of names for each list headed `Groom`, `Bride` and `Vendors`. The `List` column says `Groom`, `Bride` or `Vendor`. If the sheet has an `Entry code` column, those codes are kept.
 - **Send each guest their pass**: every guest's row has their QR code, with Download and Share.
 - **At the door**: tap Scan a pass and hold each guest's QR code in front of the camera.
+- **Who checked whom in**: give each person a name in Settings → People. Every check-in records who made it, and their name shows beside the guest at the door, in the guest list and in the downloaded list. Without a name, the name on their Google account is used.
 
 ## Who can do what
 
@@ -83,6 +84,8 @@ In the Firebase console open **Authentication → Settings → Authorized domain
 | Change settings and helpers | Yes | No | No |
 
 These limits are enforced by the database rules, not only by which buttons the page shows.
+
+When `firestore.rules` changes, publish it again in the Firebase console (**Firestore Database → Rules**, replace everything, **Publish**). The site keeps working with the older rules; it just cannot record who checked a guest in until they are published.
 
 ## Good to know
 
