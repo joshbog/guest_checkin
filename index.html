@@ -141,6 +141,8 @@ button,input,select{font:inherit;color:inherit}
 .typed .text-in{flex:1 1 11rem;width:auto;font-weight:500;font-size:1.1rem;letter-spacing:.18em;text-transform:uppercase}
 
 .ledger{display:grid;gap:0;margin-top:clamp(8px,2vw,16px)}
+.ledger-bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;display:grid;gap:10px;padding-bottom:10px;
+  background:var(--paper);border-bottom:1px solid var(--line)}   /* the tabs and the search stay in reach down a long list */
 .tabs{display:flex;gap:0;border-bottom:1px solid var(--accent)}
 .tabs button{flex:1 1 0;min-width:0;padding:13px 8px;background:transparent;border:0;border-radius:0;cursor:pointer;
   font:500 .78rem/1.3 var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
@@ -311,8 +313,6 @@ dialog.pass::backdrop{background:var(--veil)}
 
   <div class="scan-acts" id="scan-acts">
     <button class="btn big" type="button" id="scan-live">Scan a pass</button>
-    <input class="sr" id="shot" type="file" accept="image/*" capture="environment">
-    <label class="link" for="shot" id="scan-btn">Take a photo instead</label>
   </div>
 
   <form class="typed" id="code-form" novalidate>
@@ -331,9 +331,13 @@ dialog.pass::backdrop{background:var(--veil)}
   </div>
 
   <section class="ledger" id="ledger" aria-label="Arrivals">
-    <div class="tabs" role="tablist">
-      <button type="button" id="tab-in" role="tab" aria-selected="true" aria-controls="rows">Arrived<b id="n-in">0</b></button>
-      <button type="button" id="tab-out" role="tab" aria-selected="false" aria-controls="rows">Still to come<b id="n-out">0</b></button>
+    <div class="ledger-bar" id="ledger-bar">
+      <div class="tabs" role="tablist">
+        <button type="button" id="tab-in" role="tab" aria-selected="true" aria-controls="rows">Arrived<b id="n-in">0</b></button>
+        <button type="button" id="tab-out" role="tab" aria-selected="false" aria-controls="rows">Still to come<b id="n-out">0</b></button>
+      </div>
+      <label class="sr" for="find">Search guests by name</label>
+      <input class="text-in" id="find" type="search" placeholder="Search by name" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
     </div>
     <ol class="rows" id="rows"></ol>
     <p class="empty" id="empty">Guests appear here as they are checked in.</p>
@@ -634,7 +638,7 @@ dialog.pass::backdrop{background:var(--veil)}
   var LISTS = ["Groom's guest", "Bride's guest"];
   var guests = new Map();          // entry code -> guest record, kept live from the shared guest list
   var loaded = false, db = null, saver = null, busy = false, isOwner = false, canWrite = true;
-  var mode = 'door', view = 'in', resetting = false;
+  var mode = 'door', view = 'in', find = '', resetting = false;
   var q = '', filt = 'all', rowState = null, dupOk = '', passOpen = null;
   var importOpen = false, pending = null, importing = false, sheetReader = null, paint = 0;
   var noData = false;   // true when this device cannot open the guest list at all (signed out, or not invited)
@@ -928,82 +932,17 @@ dialog.pass::backdrop{background:var(--veil)}
     }
   }
 
-  /* ================= the door: reading the QR code from a photo ================= */
-  async function loadPicture(file){
-    if (window.createImageBitmap) {
-      try { return await createImageBitmap(file, {imageOrientation: 'from-image'}); } catch (e) {}
-      try { return await createImageBitmap(file); } catch (e) {}
-    }
-    return await new Promise(function(res, rej){
-      var img = new Image(), url = URL.createObjectURL(file);
-      img.onload = function(){ URL.revokeObjectURL(url); res(img); };
-      img.onerror = function(){ URL.revokeObjectURL(url); rej(new Error('picture')); };
-      img.src = url;
-    });
-  }
-  function scanRegion(src, sx, sy, sw, sh, max){
-    if (!window.jsQR) return null;
-    var k = Math.min(1, max / Math.max(sw, sh));
-    var w = Math.max(1, Math.round(sw * k)), h = Math.max(1, Math.round(sh * k));
-    var c = document.createElement('canvas'); c.width = w; c.height = h;
-    var ctx = c.getContext('2d', {willReadFrequently: true});
-    ctx.drawImage(src, sx, sy, sw, sh, 0, 0, w, h);
-    var d = ctx.getImageData(0, 0, w, h);
-    var hit = window.jsQR(d.data, w, h, {inversionAttempts: 'dontInvert'});
-    return hit && hit.data ? hit.data : null;
-  }
-  async function readCode(file){
-    var src = await loadPicture(file), W = src.width, H = src.height;
-    if ('BarcodeDetector' in window) {
-      try {
-        var hits = await new window.BarcodeDetector({formats: ['qr_code']}).detect(src);
-        if (hits.length && hits[0].rawValue) return hits[0].rawValue;
-      } catch (e) {}
-    }
-    // Whole photo at three sizes, then the middle of the photo, where the code usually is.
-    var m = Math.min(W, H);
-    var tries = [[0, 0, W, H, 1100], [0, 0, W, H, 700], [0, 0, W, H, 1800],
-                 [(W - m * .75) / 2, (H - m * .75) / 2, m * .75, m * .75, 900],
-                 [(W - m * .5) / 2, (H - m * .5) / 2, m * .5, m * .5, 900]];
-    for (var i = 0; i < tries.length; i++) {
-      var t = tries[i], v = scanRegion(src, t[0], t[1], t[2], t[3], t[4]);
-      if (v) return v;
-      await sleep(0);
-    }
-    return null;
-  }
-
-  $('shot').addEventListener('change', async function(e){
-    var file = e.target.files && e.target.files[0];
-    e.target.value = '';
-    if (!file || busy) return;
-    busy = true;
-    show('busy', 'Reading', 'Reading the code', 'Hold on a moment.');
-    var raw = null, failed = false;
-    try { raw = await readCode(file); } catch (err) { failed = true; }
-    busy = false;
-    if (!raw) {
-      var canScan = !!window.jsQR || 'BarcodeDetector' in window;
-      show('miss', 'No code found', failed ? 'That photo could not be opened' : 'Try the photo again',
-        canScan ? 'Fill the frame with the QR code, keep it flat and in focus, then scan again. Or type the entry code printed under it.'
-                : 'The scanner did not load. Check the signal and reload the page, or type the entry code printed on the pass.');
-      return;
-    }
-    var code = norm(raw);
-    if (!code) { showBad(''); return; }
-    checkIn(code);
-  });
   /* ================= the door: live camera scanner ================= */
   function keepAwake(){ try { if (navigator.wakeLock && navigator.wakeLock.request) navigator.wakeLock.request('screen').catch(function(){}); } catch (e) {} }
   async function startCamera(){
     if (cam.on) return;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      show('miss', 'No camera', 'This browser cannot open the camera', 'Use Take a photo instead, or type the entry code printed on the pass.'); return;
+      show('miss', 'No camera', 'This browser cannot open the camera', 'Type the entry code printed on the pass instead.'); return;
     }
     try {
       cam.stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: 'environment'}, width: {ideal: 1280}, height: {ideal: 720}}, audio: false});
     } catch (e) {
-      show('miss', 'Camera blocked', 'The camera did not open', 'Allow this site to use the camera in your browser settings, then tap Scan a pass again. Or use Take a photo instead.'); return;
+      show('miss', 'Camera blocked', 'The camera did not open', 'Allow this site to use the camera in your browser settings, then tap Scan a pass again. Or type the entry code printed on the pass.'); return;
     }
     var v = $('cam'); v.srcObject = cam.stream;
     try { await v.play(); } catch (e) {}
@@ -1056,7 +995,6 @@ dialog.pass::backdrop{background:var(--veil)}
   }
   $('scan-live').addEventListener('click', startCamera);
   $('cam-stop').addEventListener('click', stopCamera);
-  $('scan-btn').addEventListener('click', keepAwake);
   document.addEventListener('visibilitychange', function(){ if (document.hidden) stopCamera(); });
   $('code-form').addEventListener('submit', function(e){
     e.preventDefault();
@@ -1068,7 +1006,6 @@ dialog.pass::backdrop{background:var(--veil)}
   });
 
   /* ================= tally, shared by both views ================= */
-  function count(list){ var n = 0; guests.forEach(function(g){ if (g.checkedInAt && g.list === list) n++; }); return n; }
   function renderTally(){
     var list = all(), inside = list.filter(function(g){ return g.checkedInAt; }).length;
     var tally = $('tally'); tally.textContent = '';
@@ -1082,7 +1019,6 @@ dialog.pass::backdrop{background:var(--veil)}
     else {
       tally.appendChild(el('b', '', inside));
       tally.appendChild(el('span', '', ' of ' + list.length + ' arrived'));
-      tally.appendChild(el('i', '', '  ·  Groom ' + count(LISTS[0]) + '  ·  Bride ' + count(LISTS[1])));
     }
   }
 
@@ -1092,7 +1028,10 @@ dialog.pass::backdrop{background:var(--veil)}
     var inside = list.filter(function(g){ return g.checkedInAt; }).sort(function(a, b){ return b.checkedInAt - a.checkedInAt; });
     var waiting = list.filter(function(g){ return !g.checkedInAt; }).sort(function(a, b){ return a.no - b.no; });
     $('n-in').textContent = inside.length; $('n-out').textContent = waiting.length;
-    var rows = $('rows'), shown = view === 'in' ? inside : waiting;
+    var want = find.trim().toLowerCase();
+    function named(g){ return !want || g.name.toLowerCase().indexOf(want) >= 0; }
+    var rows = $('rows'), shown = (view === 'in' ? inside : waiting).filter(named);
+    var elsewhere = want ? (view === 'in' ? waiting : inside).filter(named).length : 0;
     rows.textContent = '';
     shown.forEach(function(g){
       var li = el('li');
@@ -1107,8 +1046,11 @@ dialog.pass::backdrop{background:var(--veil)}
     empty.textContent = !loaded ? 'Opening the guest list.'
       : noData ? 'Arrivals show here once an organiser has invited this account.'
       : !list.length ? 'No guests on the list yet.'
+      : want ? 'No guest with that name ' + (view === 'in' ? 'has arrived.' : 'is still to come.')
+          + (elsewhere ? ' ' + elsewhere + (elsewhere === 1 ? ' match' : ' matches') + ' under ' + (view === 'in' ? 'Still to come.' : 'Arrived.') : '')
       : view === 'in' ? 'Guests appear here as they are checked in.' : 'Everyone on the list has arrived.';
   }
+  $('find').addEventListener('input', function(e){ find = e.target.value; renderDoor(); });
   function setView(v){
     view = v;
     $('tab-in').setAttribute('aria-selected', String(v === 'in'));
