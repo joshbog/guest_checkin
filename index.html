@@ -1,0 +1,1837 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#6B1626">
+<title>Guest check-in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..600;1,400..600&family=Jost:wght@300..600&display=swap">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+img{max-width:100%}
+[hidden]{display:none!important}
+/* Layout: the door desk. The crest and title, the burgundy date strip carrying the live tally,
+   then one of two views: the door (a large verdict panel, the scan button, the ledger of arrivals)
+   or, for the couple only, the guest list manager (find, add, edit, remove, passes).
+   Single ivory look on purpose, to match the wedding website. */
+:root{
+  color-scheme:light;
+  --paper:#FBF7EE;        /* ivory, the main colour */
+  --paper-2:#F4EDDE;      /* deeper ivory */
+  --banner:#FFFDF8;       /* flat banner white */
+  --ink:#33221A;
+  --muted:#6C594B;
+  --accent:#6B1626;       /* burgundy */
+  --wine:#6B1626;
+  --wine-deep:#4F0F1B;
+  --on-wine:#FBF3E2;
+  --on-wine-soft:#EAD9C6;
+  --line:rgba(107,22,38,.2);
+  --shadow:rgba(79,15,27,.32);
+  --veil:rgba(51,34,26,.55);
+  /* verdict colours: separate from the burgundy accent so a refusal never reads as decoration */
+  --ok:#1D6A46;
+  --on-ok:#F2FBF4;
+  --warn:#F0BC55;
+  --on-warn:#2E1F10;
+  --stop:#B3241C;
+  --on-stop:#FFF6F3;
+  --qr-ground:#FFFFFF;    /* QR codes always sit on white so they scan */
+  --cam:#17110F;          /* behind the camera picture */
+  --on-cam:#FFFDF8;
+
+  --display:"Playfair Display","Didot","Bodoni 72",Georgia,serif;
+  --body:"Jost","Futura","Century Gothic","Avenir Next",system-ui,sans-serif;
+  --gutter:clamp(16px,4.5vw,44px);
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 1.0625rem/1.55 var(--body);-webkit-font-smoothing:antialiased}
+h1,h2,p,ol,ul{margin:0}
+ol,ul{padding:0;list-style:none}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.wrap{max-width:760px;margin-inline:auto;padding-inline:var(--gutter)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.eyebrow,.label{font:500 .78rem/1.3 var(--body);letter-spacing:.22em;text-transform:uppercase}
+.eyebrow{color:var(--accent)}
+.label{color:var(--muted)}
+
+/* ---------- masthead ---------- */
+.mast{background:var(--paper-2)}
+.mast-in{display:flex;flex-wrap:wrap;align-items:center;gap:12px clamp(14px,4vw,24px);padding-block:18px}
+.crest{width:clamp(72px,20vw,104px);height:auto;color:var(--accent);flex:none;display:block}
+.mast-text{display:grid;gap:6px;min-width:0;flex:1 1 9rem}
+.mast h1{font:400 clamp(1.6rem,6.4vw,2.3rem)/1.08 var(--display);text-wrap:balance}
+.carpet{background:var(--wine);color:var(--on-wine);box-shadow:inset 0 10px 14px -10px var(--shadow)}
+.carpet ul{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 28px;padding-block:14px;
+  font:500 .8rem/1.5 var(--body);letter-spacing:.16em;text-transform:uppercase}
+.carpet li{min-width:0}
+.tally{font-variant-numeric:tabular-nums lining-nums}
+.tally b{font-weight:500;font-size:1.35em;letter-spacing:.04em}
+.tally i{font-style:normal;color:var(--on-wine-soft)}
+
+/* ---------- shared controls ---------- */
+.btn{display:inline-grid;place-items:center;font:500 .8rem/1 var(--body);letter-spacing:.14em;text-transform:uppercase;text-decoration:none;cursor:pointer;
+  padding:14px 18px;border:1px solid var(--accent);background:var(--wine);color:var(--on-wine);border-radius:0;text-align:center}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn:hover{filter:brightness(1.12)}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+.btn.big{width:100%;min-height:68px;font-size:1rem;letter-spacing:.2em}
+.btn.small{padding:11px 14px;font-size:.72rem}
+.sr:focus-visible + .btn,.sr:focus-visible + .link{outline:2px solid var(--accent);outline-offset:3px}
+.text-in{width:100%;min-width:0;padding:12px 14px;border:1px solid var(--accent);border-radius:0;background:var(--banner);font:400 1.05rem/1.25 var(--body)}
+.text-in::placeholder{color:var(--muted);opacity:.6}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.field{display:grid;gap:8px;min-width:0}
+.grow{flex:1 1 13rem}
+.link{background:transparent;border:0;padding:6px 0;cursor:pointer;color:var(--accent);border-radius:0;
+  font:500 .72rem/1.2 var(--body);letter-spacing:.14em;text-transform:uppercase;text-decoration:underline;text-underline-offset:3px}
+.link.danger{color:var(--stop)}
+.link:disabled{opacity:.45;cursor:not-allowed}
+.msg{color:var(--muted)}
+.msg:empty{display:none}
+.msg.good{color:var(--ok)}
+.msg.bad{color:var(--stop)}
+.notice{padding:14px 16px;border:1px solid var(--accent);background:var(--banner);color:var(--ink)}
+.empty{padding-block:22px;color:var(--muted)}
+
+/* ---------- the door ---------- */
+.desk{display:grid;gap:clamp(18px,4vw,26px);padding-block:clamp(20px,5vw,36px) clamp(40px,8vw,72px)}
+.verdict{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;column-gap:clamp(14px,4vw,22px);
+  min-height:12.5rem;padding:clamp(20px,5vw,32px);background:var(--banner);color:var(--ink);border:1px solid var(--line)}
+.v-mark{width:3.2rem;height:3.2rem;border-radius:50%;display:grid;place-items:center;border:1.5px solid currentColor;
+  font:500 1.7rem/1 var(--body)}
+.v-text{display:grid;gap:8px;min-width:0}
+.v-eyebrow{font:500 .84rem/1.3 var(--body);letter-spacing:.2em;text-transform:uppercase}
+.v-name{font:400 clamp(1.75rem,7.6vw,2.9rem)/1.1 var(--display);text-wrap:balance;overflow-wrap:anywhere}
+.v-note{font-size:1.02rem;line-height:1.45}
+.verdict.idle .v-mark,.verdict.busy .v-mark,.verdict.miss .v-mark{color:var(--accent)}
+.verdict.idle .v-eyebrow,.verdict.busy .v-eyebrow,.verdict.miss .v-eyebrow{color:var(--accent)}
+.verdict.idle .v-note,.verdict.busy .v-note,.verdict.miss .v-note{color:var(--muted)}
+.verdict.ok{background:var(--ok);color:var(--on-ok);border-color:var(--ok)}
+.verdict.dup{background:var(--warn);color:var(--on-warn);border-color:var(--warn)}
+.verdict.bad{background:var(--stop);color:var(--on-stop);border-color:var(--stop)}
+.verdict{position:relative}
+.v-close{position:absolute;top:10px;right:10px;width:44px;height:44px;display:grid;place-items:center;padding:0;
+  background:transparent;color:inherit;border:1px solid currentColor;border-radius:0;cursor:pointer;opacity:.85}
+.v-close:hover{opacity:1}
+.v-close:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+.verdict.closable .v-eyebrow{padding-right:48px}
+.verdict.busy .v-mark{animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+
+.scanner{display:grid;gap:10px}
+.cam{position:relative;aspect-ratio:4 / 3;max-height:62dvh;width:100%;overflow:hidden;background:var(--cam)}
+.cam video{display:block;width:100%;height:100%;object-fit:cover}
+.reticle{position:absolute;left:50%;top:50%;width:min(58%,300px);aspect-ratio:1;translate:-50% -50%;border:2px solid var(--on-cam);opacity:.9;pointer-events:none}
+.scan-acts{display:grid;gap:10px;justify-items:center}
+.who{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;font-size:.92rem;color:var(--muted);overflow-wrap:anywhere}
+.staff{display:grid;width:100%}
+.staff li{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 14px;padding-block:10px;border-bottom:1px solid var(--line)}
+.staff .s-mail{min-width:0;overflow-wrap:anywhere}
+.staff .s-meta{display:flex;align-items:baseline;gap:14px;color:var(--muted);font-size:.92rem}
+.typed{display:grid;gap:8px}
+.typed .text-in{flex:1 1 11rem;width:auto;font-weight:500;font-size:1.1rem;letter-spacing:.18em;text-transform:uppercase}
+
+.ledger{display:grid;gap:0;margin-top:clamp(8px,2vw,16px)}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--accent)}
+.tabs button{flex:1 1 0;min-width:0;padding:13px 8px;background:transparent;border:0;border-radius:0;cursor:pointer;
+  font:500 .78rem/1.3 var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--wine);color:var(--on-wine)}
+.tabs b,.chip b{font-weight:500;font-variant-numeric:tabular-nums;margin-left:.4em}
+.rows li{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 16px;padding-block:13px;border-bottom:1px solid var(--line)}
+.r-name{font:400 1.18rem/1.25 var(--display);min-width:0;overflow-wrap:anywhere}
+.r-meta{display:flex;align-items:baseline;gap:12px;font-size:.92rem;color:var(--muted);font-variant-numeric:tabular-nums}
+
+/* ---------- the guest list manager ---------- */
+.tools{display:flex;flex-wrap:wrap;align-items:end;gap:14px 18px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:12px 12px;border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:0;cursor:pointer;
+  font:500 .72rem/1 var(--body);letter-spacing:.14em;text-transform:uppercase}
+.chip[aria-pressed="true"]{background:var(--wine);color:var(--on-wine)}
+.add{display:grid;gap:12px;justify-items:start}
+.add form{display:grid;gap:12px;width:100%;padding:16px;border:1px solid var(--line);background:var(--banner)}
+.manage li{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;justify-content:normal;gap:10px 14px;padding-block:14px}
+.m-qr{display:block;width:72px;height:72px;padding:4px;background:var(--qr-ground);color:var(--wine-deep);border:1px solid var(--line);border-radius:0;cursor:zoom-in}
+.m-qr svg{display:block;width:100%;height:100%}
+.m-qr:hover{border-color:var(--accent)}
+.m-main{display:grid;gap:2px;min-width:0}
+.m-meta{font-size:.92rem;color:var(--muted)}
+.m-code{font-weight:500;letter-spacing:.1em;white-space:nowrap}
+.status{font:500 .72rem/1.3 var(--body);letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;color:var(--muted);font-variant-numeric:tabular-nums}
+.status.in{color:var(--ok)}
+.m-main .status{margin-top:3px}
+.m-acts{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:2px 20px}
+.m-form{grid-column:1 / -1;display:grid;gap:10px;padding:14px;border:1px solid var(--line);background:var(--banner)}
+.m-form p{color:var(--ink)}
+.whole{display:grid;gap:12px;justify-items:start}
+.whole + .whole{padding-top:18px;border-top:1px solid var(--line)}
+.nudge{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px}
+.nudge p{flex:1 1 14rem;min-width:0}
+.import{display:grid;gap:14px;padding:clamp(16px,4vw,26px)}
+.import h2{font:400 clamp(1.5rem,5.4vw,2rem)/1.12 var(--display);text-wrap:balance}
+.import .hint{color:var(--muted);max-width:36rem}
+.import-preview{display:grid;gap:12px;padding-top:14px;border-top:1px solid var(--line)}
+.import-count{font:400 1.25rem/1.3 var(--display)}
+.import-notes{display:grid;gap:6px;color:var(--muted)}
+.import-notes li{padding-left:1em;text-indent:-1em}
+.import-notes li::before{content:"· "}
+.whole p{max-width:36rem}
+.whole .hint{color:var(--muted)}
+
+/* ---------- pass preview ---------- */
+dialog.pass{border:1px solid var(--accent);border-radius:0;padding:0;background:var(--paper);color:var(--ink);width:min(92vw,400px);max-height:94dvh;overflow:auto}
+dialog.pass.wide{width:min(94vw,520px)}
+dialog.pass::backdrop{background:var(--veil)}
+.pass-in{display:grid;gap:12px;padding:16px}
+.pass-in img{display:block;width:100%;height:auto;border:1px solid var(--line);background:var(--banner)}
+.pass-in .hint{color:var(--muted);font-size:.95rem}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sheet-head .eyebrow{min-width:0;overflow-wrap:anywhere}
+.icon-btn{flex:none;width:44px;height:44px;display:grid;place-items:center;padding:0;background:transparent;color:var(--accent);
+  border:1px solid var(--accent);border-radius:0;cursor:pointer}
+.icon-btn:hover{background:var(--wine);color:var(--on-wine)}
+.pin{max-width:13rem;text-align:center;font-weight:500;font-size:1.35rem;letter-spacing:.38em;font-variant-numeric:tabular-nums}
+.event-form{display:grid;gap:12px;width:100%;justify-items:start}
+.event-form .field,.event-form .row{width:100%}
+.event-form .row{align-items:end}
+.event-form .grow{flex:1 1 9.5rem}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(11rem,1fr));gap:8px;width:100%}
+.swatch{display:flex;align-items:center;gap:10px;min-width:0;padding:9px 11px;border:1px solid var(--line);border-radius:0;background:var(--banner);color:var(--ink);
+  cursor:pointer;text-align:left;font:400 .98rem/1.2 var(--body)}
+.swatch i{flex:none;display:block;width:32px;height:32px;border:1px solid var(--line)}
+.swatch[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.swatch:disabled{cursor:default;opacity:.75}
+.lock-form{display:grid;gap:12px;justify-items:start}
+.lock-form .field{flex:0 1 13rem}
+@media (prefers-reduced-motion:reduce){.verdict.busy .v-mark{animation:none}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="crest" viewBox="245 150 510 490">
+  <g transform="translate(293 407) scale(1.08 1.08)" fill="none" stroke="currentColor" stroke-width="0.95" stroke-linecap="round" stroke-linejoin="round"><path d="M13 57 C-5 38 -13 10 -1 -41 M5.17 47.13 C9.49 41.5 8.5 28.48 5.71 21.14 C2.62 28.35 1.09 41.33 5.17 47.13Z M5.17 47.13 L5.59 26.86 M-0.23 37.09 C-2.56 30.89 -13.35 25.51 -20.53 24.29 C-16.34 30.24 -6.83 37.66 -0.23 37.09Z M-0.23 37.09 L-16.07 27.11 M-4.1 25.5 C0.99 22.48 3.64 12.26 3.29 5.84 C-1.2 10.44 -5.94 19.87 -4.1 25.5Z M-4.1 25.5 L1.66 10.17 M-6.18 13.14 C-6.13 7.93 -12.7 1.69 -17.76 -0.64 C-16.34 4.75 -11.33 12.3 -6.18 13.14Z M-6.18 13.14 L-15.21 2.4 M-6.69 0.22 C-2.42 -0.75 0.9 -7.25 1.43 -11.79 C-2.58 -9.61 -7.39 -4.11 -6.69 0.22Z M-6.69 0.22 L-0.36 -9.15 M-5.88 -13.05 L-10.7 -19.43 M-10.7 -19.43 C-9.44 -22.08 -13.44 -26.95 -16.12 -26.62 C-17.18 -24.13 -13.59 -18.94 -10.7 -19.43Z M-4.01 -26.38 L0.58 -30.23 M0.58 -30.23 C2.98 -29.24 7.12 -33.02 6.71 -35.38 C4.46 -36.19 0.02 -32.77 0.58 -30.23Z M0.09 -43.44 C3.21 -43.49 4.4 -47.09 3.84 -49.82 C1.18 -48.98 -1.38 -46.19 0.09 -43.44Z M0.89 -41.61 C1.91 -38.66 5.69 -38.64 8.12 -40.01 C6.49 -42.28 3.05 -43.86 0.89 -41.61Z M-0.61 -40.28 C-3.1 -38.4 -1.94 -34.8 0.11 -32.92 C1.77 -35.16 2.2 -38.92 -0.61 -40.28Z M-2.33 -41.29 C-4.89 -43.08 -7.96 -40.87 -9.11 -38.33 C-6.47 -37.45 -2.76 -38.2 -2.33 -41.29Z M-1.9 -43.25 C-0.99 -46.23 -4.04 -48.47 -6.81 -48.78 C-6.83 -45.99 -4.97 -42.7 -1.9 -43.25Z"/><circle cx="-0.77" cy="-41.97" r="0.9" fill="currentColor" stroke="none"/></g>
+  <g transform="translate(707 407) scale(-1.08 1.08)" fill="none" stroke="currentColor" stroke-width="0.95" stroke-linecap="round" stroke-linejoin="round"><path d="M13 57 C-5 38 -13 10 -1 -41 M5.17 47.13 C9.49 41.5 8.5 28.48 5.71 21.14 C2.62 28.35 1.09 41.33 5.17 47.13Z M5.17 47.13 L5.59 26.86 M-0.23 37.09 C-2.56 30.89 -13.35 25.51 -20.53 24.29 C-16.34 30.24 -6.83 37.66 -0.23 37.09Z M-0.23 37.09 L-16.07 27.11 M-4.1 25.5 C0.99 22.48 3.64 12.26 3.29 5.84 C-1.2 10.44 -5.94 19.87 -4.1 25.5Z M-4.1 25.5 L1.66 10.17 M-6.18 13.14 C-6.13 7.93 -12.7 1.69 -17.76 -0.64 C-16.34 4.75 -11.33 12.3 -6.18 13.14Z M-6.18 13.14 L-15.21 2.4 M-6.69 0.22 C-2.42 -0.75 0.9 -7.25 1.43 -11.79 C-2.58 -9.61 -7.39 -4.11 -6.69 0.22Z M-6.69 0.22 L-0.36 -9.15 M-5.88 -13.05 L-10.7 -19.43 M-10.7 -19.43 C-9.44 -22.08 -13.44 -26.95 -16.12 -26.62 C-17.18 -24.13 -13.59 -18.94 -10.7 -19.43Z M-4.01 -26.38 L0.58 -30.23 M0.58 -30.23 C2.98 -29.24 7.12 -33.02 6.71 -35.38 C4.46 -36.19 0.02 -32.77 0.58 -30.23Z M0.09 -43.44 C3.21 -43.49 4.4 -47.09 3.84 -49.82 C1.18 -48.98 -1.38 -46.19 0.09 -43.44Z M0.89 -41.61 C1.91 -38.66 5.69 -38.64 8.12 -40.01 C6.49 -42.28 3.05 -43.86 0.89 -41.61Z M-0.61 -40.28 C-3.1 -38.4 -1.94 -34.8 0.11 -32.92 C1.77 -35.16 2.2 -38.92 -0.61 -40.28Z M-2.33 -41.29 C-4.89 -43.08 -7.96 -40.87 -9.11 -38.33 C-6.47 -37.45 -2.76 -38.2 -2.33 -41.29Z M-1.9 -43.25 C-0.99 -46.23 -4.04 -48.47 -6.81 -48.78 C-6.83 -45.99 -4.97 -42.7 -1.9 -43.25Z"/><circle cx="-0.77" cy="-41.97" r="0.9" fill="currentColor" stroke="none"/></g>
+  </symbol>
+</svg>
+
+<header class="mast">
+  <div class="wrap mast-in">
+    <img class="crest" id="crest-img" alt="" width="510" height="490" hidden>
+    <div class="mast-text">
+      <p class="eyebrow" id="mast-type">Event</p>
+      <h1 id="page-title">Guest check-in</h1>
+      <p class="who" id="who" hidden><span id="who-email"></span><button class="link" type="button" id="signout">Sign out</button></p>
+    </div>
+    <div class="row">
+      <button class="btn ghost small" type="button" id="switch">Manage guests</button>
+      <button class="btn ghost small" type="button" id="open-settings" hidden>Settings</button>
+    </div>
+  </div>
+  <div class="carpet">
+    <ul class="wrap">
+      <li id="when"></li>
+      <li class="tally" id="tally" role="status"><i>Opening the guest list</i></li>
+    </ul>
+  </div>
+</header>
+
+<!-- ================= the door ================= -->
+<main class="wrap desk" id="door">
+  <section class="verdict idle" id="verdict" aria-live="assertive" aria-atomic="true">
+    <div class="v-mark" id="v-mark" aria-hidden="true">◆</div>
+    <div class="v-text">
+      <p class="v-eyebrow" id="v-eyebrow">Ready</p>
+      <p class="v-name" id="v-name">Scan a guest's pass</p>
+      <p class="v-note" id="v-note">Tap Scan a pass and hold the guest's QR code in front of the camera.</p>
+    </div>
+    <button class="v-close" type="button" id="v-close" aria-label="Clear this result" hidden><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false"><path d="M4 4 16 16M16 4 4 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></button>
+  </section>
+
+  <div class="notice nudge" id="signin" hidden>
+    <p id="signin-text">Sign in with the Google account you were invited with to open the guest list.</p>
+    <button class="btn small" type="button" id="signin-go">Sign in with Google</button>
+  </div>
+
+  <div class="scanner" id="scanner" hidden>
+    <div class="cam">
+      <video id="cam" playsinline muted autoplay></video>
+      <div class="reticle" aria-hidden="true"></div>
+    </div>
+    <div class="row">
+      <button class="btn ghost small" type="button" id="cam-stop">Stop camera</button>
+      <p class="hint" id="cam-msg" role="status">Hold the QR code inside the square.</p>
+    </div>
+  </div>
+
+  <div class="scan-acts" id="scan-acts">
+    <button class="btn big" type="button" id="scan-live">Scan a pass</button>
+    <input class="sr" id="shot" type="file" accept="image/*" capture="environment">
+    <label class="link" for="shot" id="scan-btn">Take a photo instead</label>
+  </div>
+
+  <form class="typed" id="code-form" novalidate>
+    <label class="label" for="code">Or type the entry code printed on the pass</label>
+    <div class="row">
+      <input class="text-in" id="code" name="code" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="XXXX-XXXX" maxlength="12">
+      <button class="btn ghost" id="code-go" type="submit">Check code</button>
+    </div>
+  </form>
+
+  <p class="notice" id="notice" hidden></p>
+
+  <div class="notice nudge" id="begin" hidden>
+    <p>No guests yet. Open Manage guests to upload your guest list from Excel, or add guests one at a time.</p>
+    <button class="btn small" type="button" id="begin-go">Get started</button>
+  </div>
+
+  <section class="ledger" aria-label="Arrivals">
+    <div class="tabs" role="tablist">
+      <button type="button" id="tab-in" role="tab" aria-selected="true" aria-controls="rows">Arrived<b id="n-in">0</b></button>
+      <button type="button" id="tab-out" role="tab" aria-selected="false" aria-controls="rows">Still to come<b id="n-out">0</b></button>
+    </div>
+    <ol class="rows" id="rows"></ol>
+    <p class="empty" id="empty">Guests appear here as they are checked in.</p>
+  </section>
+</main>
+
+<!-- ================= the guest list manager (the couple only) ================= -->
+<main class="wrap desk" id="admin" hidden>
+  <div class="notice nudge" id="event-nudge" hidden>
+    <p>Add your event's name, the names, the date and your colours. They show on this page and on every pass.</p>
+    <button class="btn small" type="button" id="event-nudge-go">Open Settings</button>
+  </div>
+  <div class="notice nudge" id="lock-nudge" hidden>
+    <p>No passcode yet, so anyone using this phone can open Manage guests.</p>
+    <button class="btn small" type="button" id="lock-nudge-go">Set a passcode</button>
+  </div>
+  <section class="notice import" id="import" hidden>
+    <div class="sheet-head">
+      <p class="eyebrow" id="import-eyebrow">No guests yet</p>
+      <button class="icon-btn" type="button" id="import-close" aria-label="Close upload" hidden><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false"><path d="M4 4 16 16M16 4 4 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></button>
+    </div>
+    <h2 id="import-title">Upload your guest list</h2>
+    <p class="hint">Choose an Excel file with one guest per row: a column headed Guest name and, beside it, a column headed List that says Groom or Bride. A sheet with one column of names for each side, headed Groom and Bride, works too. Every guest gets their own QR code; if the file has an Entry code column, those codes are kept.</p>
+    <div class="row" id="import-pick">
+      <input class="sr" id="import-file" type="file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv">
+      <label class="btn" for="import-file">Choose Excel file</label>
+      <button class="btn ghost" type="button" id="import-template">Download template</button>
+    </div>
+    <div class="import-preview" id="import-preview" hidden>
+      <p class="import-count" id="import-count"></p>
+      <ul class="import-notes" id="import-notes"></ul>
+      <div class="field" id="import-default-field" hidden>
+        <label class="label" for="import-default">Guests with no list go to</label>
+        <select class="text-in" id="import-default"><option>Groom's guest</option><option>Bride's guest</option></select>
+      </div>
+      <div class="row">
+        <button class="btn" type="button" id="import-go">Add guests</button>
+        <button class="btn ghost" type="button" id="import-cancel">Cancel</button>
+      </div>
+    </div>
+    <p class="msg" id="import-msg" role="status"></p>
+  </section>
+
+  <section class="tools" id="tools">
+    <div class="field grow">
+      <label class="label" for="q">Find a guest</label>
+      <input class="text-in" id="q" type="search" placeholder="Name or entry code" autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div class="chips" role="group" aria-label="Show">
+      <button type="button" class="chip" id="f-all" data-f="all" aria-pressed="true">All<b id="c-all">0</b></button>
+      <button type="button" class="chip" id="f-in" data-f="in" aria-pressed="false">Arrived<b id="c-in">0</b></button>
+      <button type="button" class="chip" id="f-out" data-f="out" aria-pressed="false">Not arrived<b id="c-out">0</b></button>
+    </div>
+  </section>
+
+  <section class="add">
+    <button class="btn" type="button" id="add-open">Add a guest</button>
+    <form id="add-form" hidden novalidate>
+      <p class="label">New guest</p>
+      <div class="row">
+        <div class="field grow">
+          <label class="sr" for="add-name">Guest name</label>
+          <input class="text-in" id="add-name" type="text" maxlength="60" autocomplete="off" placeholder="Guest name, for example Mrs Ada Obi">
+        </div>
+        <div class="field">
+          <label class="sr" for="add-list">Whose guest</label>
+          <select class="text-in" id="add-list"><option>Groom's guest</option><option>Bride's guest</option></select>
+        </div>
+      </div>
+      <div class="row">
+        <button class="btn" type="submit" id="add-go">Add guest</button>
+        <button class="btn ghost" type="button" id="add-cancel">Close</button>
+      </div>
+    </form>
+    <p class="msg" id="add-msg" role="status"></p>
+  </section>
+
+  <section aria-label="Guests">
+    <p class="msg" id="m-msg" role="status"></p>
+    <ol class="rows manage" id="m-rows"></ol>
+    <p class="empty" id="m-empty">Opening the guest list.</p>
+  </section>
+</main>
+
+<dialog class="pass wide" id="settings" aria-labelledby="settings-title">
+  <div class="pass-in">
+    <div class="sheet-head">
+      <p class="eyebrow" id="settings-title">Settings</p>
+      <button class="icon-btn" type="button" id="settings-close" aria-label="Close settings"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false"><path d="M4 4 16 16M16 4 4 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></button>
+    </div>
+  <section class="whole" id="event-box">
+    <p class="label">Event details</p>
+    <p class="hint" id="event-state">These show at the top of this page and on every pass.</p>
+    <form class="event-form" id="event-form" novalidate>
+      <div class="field">
+        <label class="label" for="ev-type">Event</label>
+        <input class="text-in" id="ev-type" type="text" maxlength="40" autocomplete="off" placeholder="Wedding">
+      </div>
+      <div class="row">
+        <div class="field grow">
+          <label class="label" for="ev-name1">First name</label>
+          <input class="text-in" id="ev-name1" type="text" maxlength="18" autocomplete="off">
+        </div>
+        <div class="field grow">
+          <label class="label" for="ev-name2">Second name</label>
+          <input class="text-in" id="ev-name2" type="text" maxlength="18" autocomplete="off">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field grow">
+          <label class="label" for="ev-date">Date</label>
+          <input class="text-in" id="ev-date" type="date">
+        </div>
+        <div class="field grow">
+          <label class="label" for="ev-time">Time</label>
+          <input class="text-in" id="ev-time" type="time">
+        </div>
+      </div>
+      <div class="field">
+        <label class="label" for="ev-venue">Venue</label>
+        <input class="text-in" id="ev-venue" type="text" maxlength="60" autocomplete="off" placeholder="Hall, town">
+      </div>
+      <button class="btn" type="submit" id="ev-go">Save details</button>
+    </form>
+    <p class="msg" id="event-msg" role="status"></p>
+  </section>
+
+  <section class="whole" id="theme-box">
+    <p class="label">Colour theme</p>
+    <div class="swatches" id="swatches" role="group" aria-label="Colour theme"></div>
+    <p class="msg" id="theme-msg" role="status"></p>
+  </section>
+
+  <section class="whole" id="staff-box">
+    <p class="label">People who can sign in</p>
+    <p class="hint">Each person signs in with their own Google account. Door helpers can only scan passes. Organisers can also manage guests and change these settings.</p>
+    <ul class="staff" id="staff-rows"></ul>
+    <form class="event-form" id="staff-form" novalidate>
+      <div class="row">
+        <div class="field grow">
+          <label class="label" for="staff-email">Gmail address</label>
+          <input class="text-in" id="staff-email" type="email" inputmode="email" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="name@gmail.com">
+        </div>
+        <div class="field grow">
+          <label class="label" for="staff-role">Can</label>
+          <select class="text-in" id="staff-role"><option value="door">Scan at the door</option><option value="organiser">Organise everything</option></select>
+        </div>
+      </div>
+      <button class="btn" type="submit" id="staff-go">Add person</button>
+    </form>
+    <p class="msg" id="staff-msg" role="status"></p>
+  </section>
+
+  <section class="whole" id="lock-box">
+    <p class="label">Passcode</p>
+    <p class="hint" id="lock-state">Manage guests opens with a 6-digit passcode.</p>
+    <form class="lock-form" id="lock-form" novalidate hidden>
+      <div class="row">
+        <div class="field" id="lock-old-field" hidden>
+          <label class="label" for="lock-old">Current passcode</label>
+          <input class="text-in pin" id="lock-old" type="text" inputmode="numeric" autocorrect="off" spellcheck="false" pattern="[0-9]*" maxlength="6" autocomplete="off">
+        </div>
+        <div class="field">
+          <label class="label" for="lock-new">New passcode</label>
+          <input class="text-in pin" id="lock-new" type="text" inputmode="numeric" autocorrect="off" spellcheck="false" pattern="[0-9]*" maxlength="6" autocomplete="off">
+        </div>
+        <div class="field">
+          <label class="label" for="lock-again">New passcode again</label>
+          <input class="text-in pin" id="lock-again" type="text" inputmode="numeric" autocorrect="off" spellcheck="false" pattern="[0-9]*" maxlength="6" autocomplete="off">
+        </div>
+      </div>
+      <button class="btn" type="submit" id="lock-go">Set passcode</button>
+    </form>
+    <p class="msg" id="lock-msg" role="status"></p>
+  </section>
+
+  <section class="whole">
+    <p class="label">The whole list</p>
+    <div class="row">
+      <button class="btn ghost" type="button" id="open-import">Upload guests from Excel</button>
+      <button class="btn ghost" type="button" id="csv">Download guest list</button>
+      <button class="btn ghost" type="button" id="reset">Clear all check-ins</button>
+    </div>
+    <div class="m-form" id="reset-confirm" hidden>
+      <p>Clear every check-in? Every pass becomes unused again. Do this after a test run, never during the wedding.</p>
+      <div class="row">
+        <button class="btn" type="button" id="reset-yes">Yes, clear them all</button>
+        <button class="btn ghost" type="button" id="reset-no">Keep them</button>
+      </div>
+    </div>
+    <p class="msg" id="reset-msg" role="status"></p>
+  </section>
+  </div>
+</dialog>
+
+<dialog class="pass" id="gate" aria-labelledby="gate-title">
+  <form class="pass-in" id="gate-form" novalidate>
+    <p class="eyebrow" id="gate-title">Manage guests</p>
+    <div class="field" id="gate-field">
+      <label class="label" for="gate-pin">Enter the 6-digit passcode</label>
+      <input class="text-in pin" id="gate-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off">
+    </div>
+    <p class="msg" id="gate-msg" role="status"></p>
+    <div class="row">
+      <button class="btn" type="submit" id="gate-go">Open</button>
+      <button class="btn ghost" type="button" id="gate-cancel">Cancel</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="pass" id="pass-dialog" aria-labelledby="pass-title">
+  <div class="pass-in">
+    <div class="sheet-head">
+      <p class="eyebrow" id="pass-title">Guest pass</p>
+      <button class="icon-btn" type="button" id="pass-close" aria-label="Close pass"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false"><path d="M4 4 16 16M16 4 4 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></button>
+    </div>
+    <img id="pass-img" alt="" width="1181" height="1772">
+    <p class="msg" id="pass-msg" role="status"></p>
+    <div class="row">
+      <button class="btn" type="button" id="pass-save">Download</button>
+      <button class="btn ghost" type="button" id="pass-share">Share</button>
+    </div>
+    <p class="hint" id="pass-hint" hidden>To save the pass, press and hold the picture, then choose Save or Share.</p>
+  </div>
+</dialog>
+
+<script src="vendor/jsQR.js"></script>
+<script src="vendor/qrcode.js"></script>
+<script src="vendor/firebase-app-compat.js"></script>
+<script src="vendor/firebase-auth-compat.js"></script>
+<script src="vendor/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="data.js"></script>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var HOLDER = 'door-' + Math.random().toString(36).slice(2, 10);
+  var ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';   // no 0, O, 1 or I, so codes are easy to read aloud and type
+  var LISTS = ["Groom's guest", "Bride's guest"];
+  var guests = new Map();          // entry code -> guest record, kept live from the shared guest list
+  var loaded = false, db = null, saver = null, busy = false, isOwner = false, canWrite = true;
+  var mode = 'door', view = 'in', resetting = false;
+  var q = '', filt = 'all', rowState = null, dupOk = '', passOpen = null;
+  var importOpen = false, pending = null, importing = false, sheetReader = null, paint = 0;
+  var noData = false;   // true when this device cannot open the guest list at all (signed out, or not invited)
+  var noAccess = false, myEmail = '', staff = [];
+  var cam = {on: false, stream: null, frame: 0, reading: false, last: '', lastAt: 0, tickAt: 0, detector: null, canvas: null};
+  var lock = null, unlocked = false, wrong = 0, lockedUntil = 0;
+
+  /* ---------- what the page and the passes say, and their colours: set in Settings ---------- */
+  var THEMES = {
+    burgundy:   {label: 'Burgundy and ivory',     paper: '#FBF7EE', paper2: '#F4EDDE', banner: '#FFFDF8', ink: '#33221A', muted: '#6C594B', accent: '#6B1626', deep: '#4F0F1B', on: '#FBF3E2', onSoft: '#EAD9C6'},
+    emerald:    {label: 'Emerald and cream',      paper: '#F8F6EC', paper2: '#EEEBDB', banner: '#FFFEF8', ink: '#1E2A24', muted: '#55635B', accent: '#14503F', deep: '#0C3529', on: '#F3F5E6', onSoft: '#D5DEC9'},
+    navy:       {label: 'Navy and pearl',         paper: '#F6F6F2', paper2: '#EAEBE6', banner: '#FFFFFC', ink: '#1B2230', muted: '#555E6E', accent: '#1D3461', deep: '#122143', on: '#F2F4F8', onSoft: '#CCD5E4'},
+    plum:       {label: 'Plum and blush',         paper: '#FBF4F3', paper2: '#F3E6E5', banner: '#FFFBFA', ink: '#2E1D2A', muted: '#6B5566', accent: '#5B2A5E', deep: '#401C43', on: '#FAEFF3', onSoft: '#E3CEDD'},
+    clay:       {label: 'Clay and sand',          paper: '#FAF4EA', paper2: '#F1E6D5', banner: '#FFFCF5', ink: '#33241B', muted: '#6F5B4C', accent: '#9A4A2B', deep: '#6F3119', on: '#FCF1E4', onSoft: '#EFD3BC'},
+    charcoal:   {label: 'Charcoal and champagne', paper: '#F8F5EE', paper2: '#EDE8DB', banner: '#FFFDF7', ink: '#1C1A17', muted: '#5E584E', accent: '#2B2926', deep: '#171614', on: '#F4EBD6', onSoft: '#D8C9A6'}
+  };
+  var DEFAULTS = {type: 'Event', name1: '', name2: '', date: '', time: '', venue: '', theme: 'burgundy'};
+  var eventSaved = true;   // false once we know the organiser has not filled in the event details yet
+  var cfg = Object.assign({}, DEFAULTS);
+  var DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  function dateParts(iso){
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); if (!m) return null;
+    var d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    if (d.getUTCMonth() !== +m[2] - 1 || d.getUTCDate() !== +m[3]) return null;
+    return {y: +m[1], mo: +m[2] - 1, d: +m[3], wd: d.getUTCDay()};
+  }
+  function longDate(iso){ var p = dateParts(iso); return p ? DAYS[p.wd] + ' ' + p.d + ' ' + MONTHS[p.mo] + ' ' + p.y : ''; }
+  function crestDate(iso){ var p = dateParts(iso); return p ? MONTHS[p.mo].slice(0, 3).toUpperCase() + ' ' + p.d + ', ' + p.y : ''; }
+  function niceTime(hm){ var m = /^(\d{1,2}):(\d{2})/.exec(hm || ''); if (!m || +m[1] > 23) return ''; return ((+m[1] % 12) || 12) + ':' + m[2] + ' ' + (+m[1] < 12 ? 'am' : 'pm'); }
+  function whenLine(){ var d = longDate(cfg.date), tm = niceTime(cfg.time); return d + (d && tm ? '  \u00b7  ' : '') + tm; }
+  function coupleLine(joiner){ return cfg.name1 + (cfg.name2 ? ' ' + joiner + ' ' + cfg.name2 : ''); }
+  function cleanCfg(d){
+    d = d || {};
+    function text(v, max, fallback){ v = typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : ''; return v || fallback; }
+    return {
+      type: text(d.type, 40, DEFAULTS.type), name1: text(d.name1, 18, DEFAULTS.name1),
+      name2: typeof d.name2 === 'string' ? text(d.name2, 18, '') : DEFAULTS.name2,
+      date: dateParts(d.date) ? d.date : '',
+      time: typeof d.time === 'string' ? (niceTime(d.time) ? d.time.slice(0, 5) : '') : DEFAULTS.time,
+      venue: typeof d.venue === 'string' ? text(d.venue, 60, '') : DEFAULTS.venue,
+      theme: THEMES[d.theme] ? d.theme : DEFAULTS.theme
+    };
+  }
+  // this site always draws its crest from the names and date in Settings
+  function originalCrest(){ return false; }
+  function hexRgb(h){ var n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+  function rgba(h, a){ var c = hexRgb(h); return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')'; }
+  function blend(top, under, a){
+    var x = hexRgb(top), u = hexRgb(under);
+    return '#' + [0, 1, 2].map(function(i){ return ('0' + Math.round(x[i] * a + u[i] * (1 - a)).toString(16)).slice(-2); }).join('');
+  }
+  function applyTheme(){
+    var T = THEMES[cfg.theme] || THEMES.burgundy, st = document.documentElement.style;
+    [['--paper', T.paper], ['--paper-2', T.paper2], ['--banner', T.banner], ['--ink', T.ink], ['--muted', T.muted], ['--accent', T.accent],
+     ['--wine', T.accent], ['--wine-deep', T.deep], ['--on-wine', T.on], ['--on-wine-soft', T.onSoft],
+     ['--line', rgba(T.accent, .2)], ['--shadow', rgba(T.deep, .32)], ['--veil', rgba(T.ink, .55)]].forEach(function(p){ st.setProperty(p[0], p[1]); });
+    C = {paper: T.paper, ink: T.ink, muted: T.muted, wine: T.accent, wineDeep: T.deep, onWine: T.on, onWineSoft: T.onSoft, line: blend(T.accent, T.paper, .2)};
+  }
+  function applyEvent(){
+    $('mast-type').textContent = cfg.type;
+    $('when').textContent = whenLine();
+    document.title = cfg.name1 ? coupleLine('&') + ' check-in' : 'Guest check-in';
+    var art = originalCrest(), label = coupleLine('and') + (crestDate(cfg.date) ? ', ' + longDate(cfg.date) : '');
+    $('crest-img').hidden = !cfg.name1; $('crest-img').alt = cfg.name1 ? 'Monogram: ' + label : '';
+    if (cfg.name1) paintCrest();
+    $('event-nudge').hidden = !(isOwner && !eventSaved);
+  }
+  function applyAll(){ applyTheme(); applyEvent(); renderSwatches(); }
+  function renderSwatches(){
+    var box = $('swatches'); box.textContent = '';
+    Object.keys(THEMES).forEach(function(key){
+      var T = THEMES[key], b = el('button', 'swatch'); b.type = 'button'; b.dataset.theme = key; b.disabled = !isOwner;
+      b.setAttribute('aria-pressed', String(cfg.theme === key));
+      var chip = el('i'); chip.style.background = 'linear-gradient(135deg, ' + T.accent + ' 0 50%, ' + T.paper + ' 50% 100%)';
+      b.appendChild(chip); b.appendChild(el('span', '', T.label)); box.appendChild(b);
+    });
+  }
+  async function saveCfg(next, msgId, done){
+    try { await db.doc('settings/event').set(next); cfg = cleanCfg(next); try { localStorage.setItem('event-cfg', JSON.stringify(cfg)); } catch (e) {} applyAll(); say(msgId, done, 'good'); return true; }
+    catch (err) { say(msgId, 'Could not save. Check the signal and try again.', 'bad'); return false; }
+  }
+  function fillEventForm(){
+    $('ev-type').value = cfg.type; $('ev-name1').value = cfg.name1; $('ev-name2').value = cfg.name2;
+    $('ev-date').value = cfg.date; $('ev-time').value = cfg.time; $('ev-venue').value = cfg.venue;
+    $('event-form').hidden = !isOwner;
+    $('event-state').textContent = isOwner ? 'These show at the top of this page and on every pass. Passes already sent keep working; download a pass again to get the new details on it.'
+                                           : 'Only the organiser can change the event details and colours.';
+  }
+  $('event-form').addEventListener('submit', async function(e){
+    e.preventDefault();
+    if (!db || !isOwner) return;
+    var name1 = tidy($('ev-name1').value).slice(0, 18), date = $('ev-date').value, time = $('ev-time').value;
+    if (!tidy($('ev-type').value)) { say('event-msg', 'Give the event a name, for example Wedding.', 'bad'); $('ev-type').focus(); return; }
+    if (!name1) { say('event-msg', 'Fill in the first name.', 'bad'); $('ev-name1').focus(); return; }
+    if (!dateParts(date)) { say('event-msg', 'Choose the date of the event.', 'bad'); $('ev-date').focus(); return; }
+    $('ev-go').disabled = true;
+    await saveCfg({type: tidy($('ev-type').value).slice(0, 40), name1: name1, name2: tidy($('ev-name2').value).slice(0, 18), date: date,
+                   time: niceTime(time) ? time.slice(0, 5) : '', venue: tidy($('ev-venue').value), theme: cfg.theme}, 'event-msg', 'Event details saved.');
+    $('ev-go').disabled = false;
+  });
+  $('swatches').addEventListener('click', async function(e){
+    var b = e.target.closest ? e.target.closest('.swatch') : null;
+    if (!b || !db || !isOwner || b.dataset.theme === cfg.theme) return;
+    var next = Object.assign({}, cfg, {theme: b.dataset.theme});
+    await saveCfg(next, 'theme-msg', THEMES[b.dataset.theme].label + ' is now the colour theme for this page and for new passes.');
+  });
+
+  /* ---------- people who can sign in: organisers and door helpers ---------- */
+  function renderStaff(){
+    var rows = $('staff-rows'); rows.textContent = '';
+    staff.forEach(function(s){
+      var li = el('li'); li.dataset.email = s.email;
+      li.appendChild(el('span', 's-mail', s.email));
+      var meta = el('span', 's-meta');
+      meta.appendChild(el('span', '', (s.role === 'organiser' ? 'Organiser' : 'Door helper') + (s.email === myEmail ? ' · you' : '')));
+      if (s.email !== myEmail) { var b = el('button', 'link danger', 'Remove'); b.type = 'button'; b.dataset.act = 'staff-remove'; meta.appendChild(b); }
+      li.appendChild(meta); rows.appendChild(li);
+    });
+  }
+  $('staff-form').addEventListener('submit', async function(e){
+    e.preventDefault();
+    if (!db || !isOwner) return;
+    var email = $('staff-email').value.trim().toLowerCase(), role = $('staff-role').value === 'organiser' ? 'organiser' : 'door';
+    if (!/^[^\s@\/]+@[^\s@\/]+\.[^\s@\/]+$/.test(email) || email.length > 120) { say('staff-msg', 'Type the full Google address, for example name@gmail.com.', 'bad'); $('staff-email').focus(); return; }
+    if (email === myEmail) { say('staff-msg', 'That is your own account. You are already an organiser.', 'bad'); return; }
+    $('staff-go').disabled = true;
+    try {
+      await db.collection('staff').doc(email).set({role: role, addedAt: Date.now()});
+      $('staff-email').value = '';
+      say('staff-msg', email + ' can now sign in ' + (role === 'organiser' ? 'as an organiser.' : 'to scan passes at the door.'), 'good');
+    } catch (err) { say('staff-msg', 'Could not add that person. Check the signal and try again.', 'bad'); }
+    $('staff-go').disabled = false;
+  });
+  $('staff-rows').addEventListener('click', async function(e){
+    var btn = e.target.closest ? e.target.closest('[data-act="staff-remove"]') : null;
+    if (!btn || !db || !isOwner) return;
+    var email = btn.closest('li').dataset.email;
+    if (!email || email === myEmail || !armed(btn, 'Remove')) return;
+    btn.disabled = true;
+    try { await db.collection('staff').doc(email).delete(); say('staff-msg', email + ' can no longer sign in.', 'good'); }
+    catch (err) { say('staff-msg', 'Could not remove that person. Try again.', 'bad'); btn.disabled = false; }
+  });
+  $('signin-go').addEventListener('click', async function(){
+    $('signin-go').disabled = true;
+    try { await window.site.signIn(); location.reload(); }
+    catch (err) {
+      $('signin-go').disabled = false;
+      var code = err && err.code ? String(err.code) : '';
+      $('signin-text').textContent = code.indexOf('popup-closed') >= 0 || code.indexOf('cancelled') >= 0 ? 'Sign-in was cancelled. Tap the button to try again.'
+        : code.indexOf('popup-blocked') >= 0 ? 'The sign-in window was blocked. Allow pop-ups for this site, then try again.'
+        : code.indexOf('unauthorized-domain') >= 0 ? 'This web address has not been allowed in Firebase yet. Add it under Authentication, Settings, Authorized domains.'
+        : 'Sign-in did not work. Check the signal and try again.';
+    }
+  });
+  $('signout').addEventListener('click', async function(){ stopCamera(); try { await window.site.signOut(); } catch (e) {} location.reload(); });
+
+  /* ---------- a crest drawn from the names and date, in the style of the original ---------- */
+  function fitArc(ctx, text, r, maxAngle, px, gap){
+    for (var i = 0; i < 40; i++) {
+      ctx.font = '400 ' + px + 'px ' + PLAY;
+      var total = gap * (text.length - 1);
+      for (var k = 0; k < text.length; k++) total += ctx.measureText(text[k]).width;
+      if (total <= maxAngle * r) break;
+      if (gap > 3) gap -= 1; else px *= 0.95;
+    }
+    return {px: px, gap: gap};
+  }
+  function arcText(ctx, text, cx, cy, r, mid, top, px, gap){
+    ctx.font = '400 ' + px + 'px ' + PLAY; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    var w = [], total = gap * (text.length - 1), dir = top ? 1 : -1, i;
+    for (i = 0; i < text.length; i++) { w.push(ctx.measureText(text[i]).width); total += w[i]; }
+    var a = mid - dir * total / (2 * r);
+    for (i = 0; i < text.length; i++) {
+      a += dir * (w[i] / 2) / r;
+      ctx.save(); ctx.translate(cx + r * Math.cos(a), cy + r * Math.sin(a)); ctx.rotate(a + dir * Math.PI / 2);
+      ctx.fillText(text[i], 0, 0); ctx.restore();
+      a += dir * ((w[i] / 2) + gap) / r;
+    }
+  }
+  // drawn in the original artwork's 510 x 490 box, then scaled to the width asked for
+  function drawCrest(ctx, x, y, width, colour){
+    var k = width / 510, cx = 255, cy = 245;
+    ctx.save(); ctx.translate(x, y); ctx.scale(k, k);
+    ctx.fillStyle = colour; ctx.strokeStyle = colour;
+    var names = coupleLine('&').toUpperCase(), day = crestDate(cfg.date);
+    var f1 = fitArc(ctx, names, 206, 2.62, 22, 11); arcText(ctx, names, cx, cy, 206, -Math.PI / 2, true, f1.px, f1.gap);
+    if (day) { var f2 = fitArc(ctx, day, 222, 2.0, 20, 11); arcText(ctx, day, cx, cy, 222, Math.PI / 2, false, f2.px, f2.gap); }
+    var a = cfg.name1.charAt(0).toUpperCase(), b = cfg.name2 ? cfg.name2.charAt(0).toUpperCase() : '';
+    ctx.font = '400 168px ' + PLAY; ctx.textBaseline = 'alphabetic';
+    if (b) {
+      ctx.fillRect(253.8, 123, 2.4, 224);
+      ctx.textAlign = 'right'; ctx.fillText(a, cx - 30, 294);
+      ctx.textAlign = 'left'; ctx.fillText(b, cx + 30, 294);
+    } else { ctx.textAlign = 'center'; ctx.fillText(a, cx, 294); }
+    var sprig = document.querySelector('#crest g[transform] path'), d = sprig && sprig.getAttribute('d');
+    if (d && window.Path2D) [[48, 1.08], [462, -1.08]].forEach(function(s){
+      ctx.save(); ctx.translate(s[0], 257); ctx.scale(s[1], 1.08);
+      ctx.lineWidth = 0.95; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.stroke(new Path2D(d)); ctx.beginPath(); ctx.arc(-0.77, -41.97, 0.9, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    });
+    ctx.restore();
+  }
+  var crestTurn = 0;
+  async function paintCrest(){
+    var turn = ++crestTurn;
+    try { await Promise.race([document.fonts.load('400 168px ' + PLAY, coupleLine('&').toUpperCase() + ' 0123456789'), sleep(4000)]); } catch (e) {}
+    if (turn !== crestTurn || !cfg.name1) return;
+    var c = document.createElement('canvas'); c.width = 1020; c.height = 980;
+    drawCrest(c.getContext('2d'), 0, 0, 1020, (THEMES[cfg.theme] || THEMES.burgundy).accent);
+    try { $('crest-img').src = c.toDataURL('image/png'); } catch (e) {}
+  }   // lock = the saved passcode record, never the passcode itself
+
+  function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+  function clock(ms){ return new Date(ms).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}); }
+  function ago(ms){
+    var m = Math.round((Date.now() - ms) / 60000);
+    if (m < 1) return 'moments ago';
+    if (m < 60) return m + ' min ago';
+    return Math.floor(m / 60) + ' hr ' + (m % 60) + ' min ago';
+  }
+  // A pass code is 8 letters and digits, shown as XXXX-XXXX. Anything else is not one of ours.
+  function norm(raw){
+    var s = String(raw == null ? '' : raw).toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return s.length === 8 ? s.slice(0, 4) + '-' + s.slice(4) : null;
+  }
+  function tidy(name){ return String(name || '').replace(/\s+/g, ' ').trim().slice(0, 60); }
+  function el(tag, cls, text){ var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+  function say(id, text, tone){ var n = $(id); n.textContent = text || ''; n.className = 'msg' + (tone ? ' ' + tone : ''); }
+  function all(){ return Array.from(guests.values()); }
+
+  /* ================= the door: verdict panel ================= */
+  var MARK = {idle: '◆', busy: '◆', miss: '?', ok: '✓', dup: '!', bad: '✕'};
+  function show(kind, eyebrow, name, note){
+    var closable = kind !== 'idle' && kind !== 'busy';
+    $('verdict').className = 'verdict ' + kind + (closable ? ' closable' : '');
+    $('v-close').hidden = !closable;
+    $('v-mark').textContent = MARK[kind] || '◆';
+    $('v-eyebrow').textContent = eyebrow;
+    $('v-name').textContent = name;
+    $('v-note').textContent = note || '';
+  }
+  function showReady(){ show('idle', 'Ready', "Scan a guest's pass", cam.on ? "Hold the next guest's QR code in front of the camera." : "Tap Scan a pass and hold the guest's QR code in front of the camera."); }
+  $('v-close').addEventListener('click', function(){ if (!busy) showReady(); });
+  function showGuest(kind, g){
+    if (kind === 'ok') show('ok', 'Admit', g.name, g.list + ' · checked in at ' + clock(g.checkedInAt));
+    else show('dup', 'Already used · do not admit', g.name,
+      'This pass was checked in at ' + clock(g.checkedInAt) + ' (' + ago(g.checkedInAt) + '). It admits one person, once.');
+  }
+  function showBad(code){
+    show('bad', 'Not valid · do not admit', 'Not on the guest list', code ? 'Code read: ' + code : 'That QR code is not a wedding pass.');
+  }
+
+  /* ================= the door: checking a code in ================= */
+  async function checkIn(code){
+    if (busy) return;
+    busy = true;
+    show('busy', 'Checking', code, 'Looking this pass up on the guest list.');
+    try {
+      if (!db) { show('miss', 'Not signed in', 'Guest list unavailable', 'Sign in with Google to check guests in.'); return; }
+      if (!canWrite) { show('miss', 'Not invited', 'This account cannot check guests in', 'Ask an organiser to add this Gmail address in Settings.'); return; }
+      // Unknown codes stop here, so a made-up code never touches the guest list.
+      if (loaded && !guests.has(code)) { showBad(code); return; }
+      // The database admits a pass in one atomic step, so two doors scanning it in the same second cannot both let it in.
+      var res = await db.checkIn(code);
+      if (res.status === 'missing') showBad(code);
+      else showGuest(res.status === 'ok' ? 'ok' : 'dup', res.guest);
+    } catch (e) {
+      show('miss', 'Not saved', 'Could not check this pass', 'The guest list did not answer. Check the signal and scan the pass again.');
+    } finally {
+      busy = false;
+    }
+  }
+
+  /* ================= the door: reading the QR code from a photo ================= */
+  async function loadPicture(file){
+    if (window.createImageBitmap) {
+      try { return await createImageBitmap(file, {imageOrientation: 'from-image'}); } catch (e) {}
+      try { return await createImageBitmap(file); } catch (e) {}
+    }
+    return await new Promise(function(res, rej){
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function(){ URL.revokeObjectURL(url); res(img); };
+      img.onerror = function(){ URL.revokeObjectURL(url); rej(new Error('picture')); };
+      img.src = url;
+    });
+  }
+  function scanRegion(src, sx, sy, sw, sh, max){
+    if (!window.jsQR) return null;
+    var k = Math.min(1, max / Math.max(sw, sh));
+    var w = Math.max(1, Math.round(sw * k)), h = Math.max(1, Math.round(sh * k));
+    var c = document.createElement('canvas'); c.width = w; c.height = h;
+    var ctx = c.getContext('2d', {willReadFrequently: true});
+    ctx.drawImage(src, sx, sy, sw, sh, 0, 0, w, h);
+    var d = ctx.getImageData(0, 0, w, h);
+    var hit = window.jsQR(d.data, w, h, {inversionAttempts: 'dontInvert'});
+    return hit && hit.data ? hit.data : null;
+  }
+  async function readCode(file){
+    var src = await loadPicture(file), W = src.width, H = src.height;
+    if ('BarcodeDetector' in window) {
+      try {
+        var hits = await new window.BarcodeDetector({formats: ['qr_code']}).detect(src);
+        if (hits.length && hits[0].rawValue) return hits[0].rawValue;
+      } catch (e) {}
+    }
+    // Whole photo at three sizes, then the middle of the photo, where the code usually is.
+    var m = Math.min(W, H);
+    var tries = [[0, 0, W, H, 1100], [0, 0, W, H, 700], [0, 0, W, H, 1800],
+                 [(W - m * .75) / 2, (H - m * .75) / 2, m * .75, m * .75, 900],
+                 [(W - m * .5) / 2, (H - m * .5) / 2, m * .5, m * .5, 900]];
+    for (var i = 0; i < tries.length; i++) {
+      var t = tries[i], v = scanRegion(src, t[0], t[1], t[2], t[3], t[4]);
+      if (v) return v;
+      await sleep(0);
+    }
+    return null;
+  }
+
+  $('shot').addEventListener('change', async function(e){
+    var file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file || busy) return;
+    busy = true;
+    show('busy', 'Reading', 'Reading the code', 'Hold on a moment.');
+    var raw = null, failed = false;
+    try { raw = await readCode(file); } catch (err) { failed = true; }
+    busy = false;
+    if (!raw) {
+      var canScan = !!window.jsQR || 'BarcodeDetector' in window;
+      show('miss', 'No code found', failed ? 'That photo could not be opened' : 'Try the photo again',
+        canScan ? 'Fill the frame with the QR code, keep it flat and in focus, then scan again. Or type the entry code printed under it.'
+                : 'The scanner did not load. Check the signal and reload the page, or type the entry code printed on the pass.');
+      return;
+    }
+    var code = norm(raw);
+    if (!code) { showBad(''); return; }
+    checkIn(code);
+  });
+  /* ================= the door: live camera scanner ================= */
+  function keepAwake(){ try { if (navigator.wakeLock && navigator.wakeLock.request) navigator.wakeLock.request('screen').catch(function(){}); } catch (e) {} }
+  async function startCamera(){
+    if (cam.on) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      show('miss', 'No camera', 'This browser cannot open the camera', 'Use Take a photo instead, or type the entry code printed on the pass.'); return;
+    }
+    try {
+      cam.stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: 'environment'}, width: {ideal: 1280}, height: {ideal: 720}}, audio: false});
+    } catch (e) {
+      show('miss', 'Camera blocked', 'The camera did not open', 'Allow this site to use the camera in your browser settings, then tap Scan a pass again. Or use Take a photo instead.'); return;
+    }
+    var v = $('cam'); v.srcObject = cam.stream;
+    try { await v.play(); } catch (e) {}
+    cam.on = true; cam.last = ''; cam.detector = null;
+    if ('BarcodeDetector' in window) { try { cam.detector = new window.BarcodeDetector({formats: ['qr_code']}); } catch (e) {} }
+    $('scanner').hidden = false; $('scan-live').hidden = true;
+    keepAwake();
+    if ($('verdict').className.indexOf('idle') >= 0 || $('verdict').className.indexOf('miss') >= 0) showReady();
+    cam.frame = requestAnimationFrame(watch);
+  }
+  function stopCamera(){
+    cam.on = false; cancelAnimationFrame(cam.frame);
+    if (cam.stream) { try { cam.stream.getTracks().forEach(function(tr){ tr.stop(); }); } catch (e) {} cam.stream = null; }
+    try { $('cam').srcObject = null; } catch (e) {}
+    $('scanner').hidden = true; $('scan-live').hidden = false;
+  }
+  async function watch(){
+    if (!cam.on) return;
+    cam.frame = requestAnimationFrame(watch);
+    var now = performance.now(), v = $('cam');
+    if (cam.reading || busy || now - cam.tickAt < 120 || v.readyState < 2 || !v.videoWidth) return;
+    cam.tickAt = now; cam.reading = true;
+    try {
+      var raw = null;
+      if (cam.detector) {
+        try { var hits = await cam.detector.detect(v); if (hits.length && hits[0].rawValue) raw = hits[0].rawValue; } catch (e) { cam.detector = null; }
+      }
+      if (!raw && window.jsQR) {
+        var k = Math.min(1, 720 / Math.max(v.videoWidth, v.videoHeight)), w = Math.round(v.videoWidth * k), h = Math.round(v.videoHeight * k);
+        var c = cam.canvas || (cam.canvas = document.createElement('canvas'));
+        if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+        var ctx = c.getContext('2d', {willReadFrequently: true});
+        ctx.drawImage(v, 0, 0, w, h);
+        var hit = window.jsQR(ctx.getImageData(0, 0, w, h).data, w, h, {inversionAttempts: 'dontInvert'});
+        if (hit && hit.data) raw = hit.data;
+      }
+      if (raw && cam.on) seen(raw);
+    } finally { cam.reading = false; }
+  }
+  // A pass that is still in front of the camera is not read twice: it has to leave the picture for a few seconds first,
+  // so the guest who was just admitted is not immediately shown as "already used".
+  function seen(raw){
+    var now = Date.now();
+    if (raw === cam.last && now - cam.lastAt < 4000) { cam.lastAt = now; return; }
+    cam.last = raw; cam.lastAt = now;
+    try { if (navigator.vibrate) navigator.vibrate(70); } catch (e) {}
+    var code = norm(raw);
+    if (!code) { showBad(''); return; }
+    checkIn(code);
+  }
+  $('scan-live').addEventListener('click', startCamera);
+  $('cam-stop').addEventListener('click', stopCamera);
+  $('scan-btn').addEventListener('click', keepAwake);
+  document.addEventListener('visibilitychange', function(){ if (document.hidden) stopCamera(); });
+  $('code-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    var typed = $('code').value, code = norm(typed);
+    if (!typed.trim()) return;
+    if (!code) { show('miss', 'Check the code', 'Entry codes have 8 characters', 'Type the code exactly as printed under the QR code, for example 7ABC-2DEF.'); return; }
+    $('code').value = '';
+    checkIn(code);
+  });
+
+  /* ================= tally, shared by both views ================= */
+  function count(list){ var n = 0; guests.forEach(function(g){ if (g.checkedInAt && g.list === list) n++; }); return n; }
+  function renderTally(){
+    var list = all(), inside = list.filter(function(g){ return g.checkedInAt; }).length;
+    var tally = $('tally'); tally.textContent = '';
+    if (!loaded) tally.appendChild(el('i', '', 'Opening the guest list'));
+    else if (noData) tally.appendChild(el('i', '', noAccess ? 'This account is not invited' : 'Sign in to open the guest list'));
+    else if (!list.length) tally.appendChild(el('i', '', 'No guests yet'));
+    else {
+      tally.appendChild(el('b', '', inside));
+      tally.appendChild(el('span', '', ' of ' + list.length + ' arrived'));
+      tally.appendChild(el('i', '', '  ·  Groom ' + count(LISTS[0]) + '  ·  Bride ' + count(LISTS[1])));
+    }
+  }
+
+  /* ================= the door: ledger ================= */
+  function renderDoor(){
+    var list = all();
+    var inside = list.filter(function(g){ return g.checkedInAt; }).sort(function(a, b){ return b.checkedInAt - a.checkedInAt; });
+    var waiting = list.filter(function(g){ return !g.checkedInAt; }).sort(function(a, b){ return a.no - b.no; });
+    $('n-in').textContent = inside.length; $('n-out').textContent = waiting.length;
+    var rows = $('rows'), shown = view === 'in' ? inside : waiting;
+    rows.textContent = '';
+    shown.forEach(function(g){
+      var li = el('li');
+      li.appendChild(el('span', 'r-name', g.name));
+      var meta = el('span', 'r-meta');
+      meta.appendChild(el('span', '', g.checkedInAt ? g.list + ' · ' + clock(g.checkedInAt) : g.list));
+      li.appendChild(meta); rows.appendChild(li);
+    });
+    $('begin').hidden = !(loaded && !noData && !list.length && isOwner);
+    var empty = $('empty');
+    empty.hidden = shown.length > 0;
+    empty.textContent = !loaded ? 'Opening the guest list.'
+      : noData ? 'Arrivals show here once this device is signed in.'
+      : !list.length ? 'No guests on the list yet.'
+      : view === 'in' ? 'Guests appear here as they are checked in.' : 'Everyone on the list has arrived.';
+  }
+  function setView(v){
+    view = v;
+    $('tab-in').setAttribute('aria-selected', String(v === 'in'));
+    $('tab-out').setAttribute('aria-selected', String(v === 'out'));
+    renderDoor();
+  }
+  $('tab-in').addEventListener('click', function(){ setView('in'); });
+  $('tab-out').addEventListener('click', function(){ setView('out'); });
+
+  // Two taps to clear one check-in: the first arms the button, the second clears it.
+  function armed(btn, restLabel){
+    if (btn.dataset.armed === '1') return true;
+    btn.dataset.armed = '1'; btn.textContent = 'Tap again to confirm';
+    setTimeout(function(){ if (btn.isConnected && btn.dataset.armed === '1') { btn.dataset.armed = ''; btn.textContent = restLabel; } }, 4000);
+    return false;
+  }
+
+  /* ================= the guest list manager ================= */
+  function matches(g){
+    if (filt === 'in' && !g.checkedInAt) return false;
+    if (filt === 'out' && g.checkedInAt) return false;
+    var s = q.trim().toLowerCase();
+    if (!s) return true;
+    if (g.name.toLowerCase().indexOf(s) >= 0) return true;
+    var c = s.replace(/[^a-z0-9]/g, '');
+    return c.length >= 2 && g.code.toLowerCase().replace('-', '').indexOf(c) >= 0;
+  }
+  var thumbs = new Map();
+  function qrThumb(code){
+    if (!window.qrcode) return null;
+    var d = thumbs.get(code), n = 0;
+    try {
+      if (!d) {
+        var m = qrMatrix(code); n = m.length; d = '';
+        for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (m[r][c]) d += 'M' + (c + 1) + ' ' + (r + 1) + 'h1v1h-1z';
+        d = (n + 2) + '|' + d; thumbs.set(code, d);
+      }
+    } catch (e) { return null; }
+    var cut = d.indexOf('|'), size = d.slice(0, cut), NS = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + size + ' ' + size); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('focusable', 'false');
+    svg.setAttribute('shape-rendering', 'crispEdges');
+    var path = document.createElementNS(NS, 'path'); path.setAttribute('d', d.slice(cut + 1)); path.setAttribute('fill', 'currentColor');
+    svg.appendChild(path);
+    return svg;
+  }
+  function listPicker(id, value){
+    var sel = el('select', 'text-in'); sel.id = id;
+    LISTS.forEach(function(l){ var o = el('option', '', l); o.selected = l === value; sel.appendChild(o); });
+    return sel;
+  }
+  function actBtn(label, act, danger){
+    var b = el('button', 'link' + (danger ? ' danger' : ''), label); b.type = 'button'; b.dataset.act = act; return b;
+  }
+  function renderAdmin(){
+    var list = all().sort(function(a, b){ return a.no - b.no; });
+    var nIn = list.filter(function(g){ return g.checkedInAt; }).length;
+    $('c-all').textContent = list.length; $('c-in').textContent = nIn; $('c-out').textContent = list.length - nIn;
+    if (rowState && !guests.has(rowState.code)) rowState = null;
+
+    // keep the cursor where it was if the list refreshes while a name is being edited
+    var active = document.activeElement, keep = active && active.id === 'edit-name' ? [active.selectionStart, active.selectionEnd] : null;
+    var none = loaded && !list.length;
+    $('import').hidden = !(none || importOpen);
+    $('tools').hidden = none;
+    $('import-eyebrow').textContent = none ? 'No guests yet' : 'Excel upload';
+    $('import-title').textContent = none ? 'Upload your guest list' : 'Upload more guests';
+    $('import-close').hidden = none;
+    var rows = $('m-rows'), shown = list.filter(matches);
+    rows.textContent = '';
+    shown.forEach(function(g){
+      var li = el('li'); li.dataset.code = g.code;
+      var thumb = el('button', 'm-qr'); thumb.type = 'button'; thumb.dataset.act = 'pass';
+      thumb.setAttribute('aria-label', 'View the pass for ' + g.name);
+      var art = qrThumb(g.code); if (art) thumb.appendChild(art);
+      li.appendChild(thumb);
+      var main = el('div', 'm-main');
+      main.appendChild(el('span', 'r-name', g.name));
+      var meta = el('span', 'm-meta', g.list + ' · ');
+      meta.appendChild(el('span', 'm-code', g.code));
+      main.appendChild(meta);
+      main.appendChild(el('span', 'status' + (g.checkedInAt ? ' in' : ''), g.checkedInAt ? 'Arrived ' + clock(g.checkedInAt) : 'Not arrived'));
+      li.appendChild(main);
+
+      if (rowState && rowState.code === g.code && rowState.mode === 'edit') {
+        var form = el('form', 'm-form'); form.noValidate = true; form.dataset.form = 'edit';
+        var lab = el('label', 'label', 'Guest name'); lab.htmlFor = 'edit-name';
+        var input = el('input', 'text-in'); input.id = 'edit-name'; input.type = 'text'; input.maxLength = 60; input.autocomplete = 'off'; input.value = rowState.name;
+        var lab2 = el('label', 'sr', 'Whose guest'); lab2.htmlFor = 'edit-list';
+        var pick = listPicker('edit-list', rowState.list);
+        var r = el('div', 'row');
+        var save = el('button', 'btn small', 'Save'); save.type = 'submit';
+        var cancel = el('button', 'btn ghost small', 'Cancel'); cancel.type = 'button'; cancel.dataset.act = 'cancel';
+        r.appendChild(save); r.appendChild(cancel);
+        form.appendChild(lab); form.appendChild(input); form.appendChild(lab2); form.appendChild(pick); form.appendChild(r);
+        li.appendChild(form);
+      } else if (rowState && rowState.code === g.code && rowState.mode === 'remove') {
+        var box = el('div', 'm-form');
+        box.appendChild(el('p', '', 'Remove ' + g.name + ' from the guest list? Their pass will stop working at the door.'));
+        var r2 = el('div', 'row');
+        var yes = el('button', 'btn small', 'Remove guest'); yes.type = 'button'; yes.dataset.act = 'remove-yes';
+        var no = el('button', 'btn ghost small', 'Keep guest'); no.type = 'button'; no.dataset.act = 'cancel';
+        r2.appendChild(yes); r2.appendChild(no); box.appendChild(r2);
+        li.appendChild(box);
+      } else if (rowState && rowState.code === g.code && rowState.mode === 'regen') {
+        var box2 = el('div', 'm-form');
+        box2.appendChild(el('p', '', 'Make a new QR code for ' + g.name + '? The pass they have now will stop working, so send them the new one.'));
+        var r3 = el('div', 'row');
+        var go = el('button', 'btn small', 'Make new QR code'); go.type = 'button'; go.dataset.act = 'regen-yes';
+        var stay = el('button', 'btn ghost small', 'Keep this one'); stay.type = 'button'; stay.dataset.act = 'cancel';
+        r3.appendChild(go); r3.appendChild(stay); box2.appendChild(r3);
+        li.appendChild(box2);
+      } else {
+        var acts = el('div', 'm-acts');
+        acts.appendChild(actBtn('Download', 'download'));
+        acts.appendChild(actBtn('Share', 'share'));
+        acts.appendChild(actBtn('New QR code', 'regen'));
+        acts.appendChild(actBtn('Edit', 'edit'));
+        if (g.checkedInAt) acts.appendChild(actBtn('Clear check-in', 'clear'));
+        acts.appendChild(actBtn('Remove', 'remove', true));
+        li.appendChild(acts);
+      }
+      rows.appendChild(li);
+    });
+    if (keep && $('edit-name')) { var again = $('edit-name'); again.focus(); try { again.setSelectionRange(keep[0], keep[1]); } catch (e) {} }
+
+    var empty = $('m-empty');
+    empty.hidden = shown.length > 0 || none;
+    empty.textContent = !loaded ? 'Opening the guest list.'
+      : !list.length ? 'The guest list is empty.'
+      : 'No guest matches that search.';
+  }
+
+  $('q').addEventListener('input', function(e){ q = e.target.value; renderAdmin(); });
+  ['f-all', 'f-in', 'f-out'].forEach(function(id){
+    $(id).addEventListener('click', function(){
+      filt = $(id).dataset.f;
+      ['f-all', 'f-in', 'f-out'].forEach(function(o){ $(o).setAttribute('aria-pressed', String(o === id)); });
+      renderAdmin();
+    });
+  });
+  $('m-rows').addEventListener('input', function(e){
+    if (!rowState) return;
+    if (e.target.id === 'edit-name') rowState.name = e.target.value;
+    if (e.target.id === 'edit-list') rowState.list = e.target.value;
+  });
+  $('m-rows').addEventListener('change', function(e){ if (rowState && e.target.id === 'edit-list') rowState.list = e.target.value; });
+  $('m-rows').addEventListener('submit', async function(e){
+    e.preventDefault();
+    if (!rowState || rowState.mode !== 'edit' || !db) return;
+    var code = rowState.code, name = tidy(rowState.name), list = LISTS.indexOf(rowState.list) >= 0 ? rowState.list : LISTS[0];
+    if (!name) { say('m-msg', 'A guest needs a name.', 'bad'); return; }
+    var before = guests.get(code);
+    try {
+      await db.collection('guests').doc(code).update({name: name, list: list});
+      rowState = null;
+      say('m-msg', before && before.name !== name
+        ? 'Saved. ' + name + ' keeps the same entry code, so a pass already sent still works. Open Pass to download one with the new name.'
+        : 'Saved.', 'good');
+    } catch (err) { say('m-msg', 'Could not save the change. Check the signal and try again.', 'bad'); }
+    renderAdmin();
+  });
+  $('m-rows').addEventListener('click', async function(e){
+    var btn = e.target.closest ? e.target.closest('[data-act]') : null;
+    if (!btn || !db) return;
+    var li = btn.closest('li'), code = li && li.dataset.code, g = code && guests.get(code), act = btn.dataset.act;
+    if (!g) return;
+    if (act === 'cancel') { rowState = null; renderAdmin(); return; }
+    if (act === 'edit') { rowState = {code: code, mode: 'edit', name: g.name, list: g.list}; renderAdmin(); var f = $('edit-name'); if (f) { f.focus(); f.select(); } return; }
+    if (act === 'remove') { rowState = {code: code, mode: 'remove'}; renderAdmin(); return; }
+    if (act === 'pass') { openPass(g); return; }
+    if (act === 'regen') { rowState = {code: code, mode: 'regen'}; renderAdmin(); return; }
+    if (act === 'download' || act === 'share') {
+      if (!window.qrcode || !window.jsQR) { say('m-msg', 'The pass maker did not load. Check the signal and reload the page.', 'bad'); return; }
+      btn.disabled = true; say('m-msg', 'Drawing the pass for ' + g.name + '.');
+      try {
+        var blob = await passBlob(g);
+        if (act === 'share') await sharePass(g, blob, 'm-msg'); else await savePass(g, blob, 'm-msg');
+      } catch (err) { say('m-msg', 'Could not draw this pass. Reload the page and try again.', 'bad'); }
+      if (btn.isConnected) btn.disabled = false;
+      return;
+    }
+    if (act === 'regen-yes') {
+      if (!window.qrcode || !window.jsQR) { say('m-msg', 'The pass maker did not load. Check the signal and reload the page.', 'bad'); return; }
+      var fresh = newCode();
+      if (!fresh) { say('m-msg', 'Could not make a new code. Try again.', 'bad'); return; }
+      btn.disabled = true;
+      var made = false;
+      try {
+        // the new code is saved first, then the old one is removed, so the guest is never left without a pass
+        await db.collection('guests').doc(fresh).set({no: g.no, name: g.name, list: g.list, code: fresh, checkedInAt: g.checkedInAt || 0});
+        made = true;
+        await db.collection('guests').doc(code).delete();
+        rowState = null;
+        say('m-msg', g.name + ' has a new QR code, ' + fresh + '. The old pass no longer works. Send them the new one.', 'good');
+        openPass({code: fresh, name: g.name, list: g.list, no: g.no, checkedInAt: g.checkedInAt || 0});
+      } catch (err) {
+        say('m-msg', made ? 'The new code ' + fresh + ' was made, but the old code ' + code + ' could not be switched off. Remove the older entry for ' + g.name + '.'
+                          : 'Could not make a new QR code. Check the signal and try again.', 'bad');
+      }
+      renderAdmin();
+      return;
+    }
+    if (act === 'clear') {
+      if (!armed(btn, 'Clear check-in')) return;
+      btn.disabled = true;
+      try { await db.collection('guests').doc(code).update({checkedInAt: 0}); say('m-msg', g.name + "'s pass is unused again.", 'good'); }
+      catch (err) { say('m-msg', 'Could not clear that check-in. Try again.', 'bad'); renderAdmin(); }
+      return;
+    }
+    if (act === 'remove-yes') {
+      btn.disabled = true;
+      try { await db.collection('guests').doc(code).delete(); rowState = null; say('m-msg', g.name + ' was removed. Their pass no longer works.', 'good'); }
+      catch (err) { say('m-msg', 'Could not remove the guest. Try again.', 'bad'); }
+      renderAdmin();
+    }
+  });
+
+  /* ---------- adding a guest ---------- */
+  function qrMatrix(code){
+    var qr = window.qrcode(0, 'Q'); qr.addData(code, 'Alphanumeric'); qr.make();
+    var n = qr.getModuleCount(), m = [];
+    for (var r = 0; r < n; r++) { var row = []; for (var c = 0; c < n; c++) row.push(qr.isDark(r, c)); m.push(row); }
+    return m;
+  }
+  // Draw the code small and read it back, so no guest is ever given a code that will not scan.
+  function codeScans(code){
+    try {
+      var m = qrMatrix(code), n = m.length, cell = 8, size = (n + 8) * cell;
+      var c = document.createElement('canvas'); c.width = size; c.height = size;
+      var ctx = c.getContext('2d', {willReadFrequently: true});
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size); ctx.fillStyle = '#4F0F1B';
+      for (var r = 0; r < n; r++) for (var k = 0; k < n; k++) if (m[r][k]) ctx.fillRect((k + 4) * cell, (r + 4) * cell, cell, cell);
+      var hit = window.jsQR(ctx.getImageData(0, 0, size, size).data, size, size);
+      return !!hit && hit.data === code;
+    } catch (e) { return false; }
+  }
+  function newCode(taken){
+    for (var i = 0; i < 40; i++) {
+      var a = new Uint8Array(8), s = '';
+      crypto.getRandomValues(a);
+      for (var k = 0; k < 8; k++) s += ALPHABET[a[k] & 31];
+      var code = s.slice(0, 4) + '-' + s.slice(4);
+      if (!guests.has(code) && !(taken && taken.has(code)) && codeScans(code)) { if (taken) taken.add(code); return code; }
+    }
+    return null;
+  }
+  $('add-open').addEventListener('click', function(){ $('add-form').hidden = false; $('add-open').hidden = true; say('add-msg', ''); $('add-name').focus(); });
+  $('add-cancel').addEventListener('click', function(){ $('add-form').hidden = true; $('add-open').hidden = false; dupOk = ''; say('add-msg', ''); });
+  $('add-form').addEventListener('submit', async function(e){
+    e.preventDefault();
+    if (!db || !loaded) { say('add-msg', 'The guest list is still opening. Try again in a moment.', 'bad'); return; }
+    if (!window.qrcode || !window.jsQR) { say('add-msg', 'The pass maker did not load. Check the signal and reload the page.', 'bad'); return; }
+    var name = tidy($('add-name').value), list = LISTS.indexOf($('add-list').value) >= 0 ? $('add-list').value : LISTS[0];
+    if (!name) { say('add-msg', "Type the guest's name first.", 'bad'); $('add-name').focus(); return; }
+    var twin = all().some(function(g){ return g.name.toLowerCase() === name.toLowerCase(); });
+    if (twin && dupOk !== name.toLowerCase()) {
+      dupOk = name.toLowerCase();
+      say('add-msg', name + ' is already on the list. Press Add guest again to add a second guest with this name.', 'bad');
+      return;
+    }
+    dupOk = '';
+    var code = newCode();
+    if (!code) { say('add-msg', 'Could not make an entry code. Try again.', 'bad'); return; }
+    var no = 0; guests.forEach(function(g){ if (g.no > no) no = g.no; }); no += 1;
+    $('add-go').disabled = true;
+    try {
+      await db.collection('guests').doc(code).set({no: no, name: name, list: list, code: code, checkedInAt: 0});
+      $('add-name').value = '';
+      say('add-msg', 'Added ' + name + '. Entry code ' + code + '. Download their pass and send it to them.', 'good');
+      openPass({code: code, name: name, list: list, no: no, checkedInAt: 0});
+    } catch (err) {
+      say('add-msg', 'Could not add the guest. Check the signal and try again.', 'bad');
+    }
+    $('add-go').disabled = false;
+  });
+
+  /* ---------- uploading a guest list from Excel ---------- */
+  function loadSheetReader(){
+    if (window.XLSX) return Promise.resolve();
+    if (!sheetReader) sheetReader = new Promise(function(res, rej){
+      var s = document.createElement('script');
+      s.src = 'vendor/xlsx.full.min.js';
+      s.onload = function(){ res(); };
+      s.onerror = function(){ sheetReader = null; rej(new Error('load')); };
+      document.head.appendChild(s);
+    });
+    return sheetReader;
+  }
+  function cleanName(raw){
+    var s = String(raw).replace(/[ ​-‏‪-‮﻿]/g, ' ').replace(/\s+/g, ' ').trim();
+    s = s.replace(/\b(Mr|Mrs|Ms|Miss|Dr)\./gi, '$1');
+    s = s.split(' ').map(function(w){ return /^[a-z]+$/.test(w) ? w.charAt(0).toUpperCase() + w.slice(1) : w; }).join(' ');
+    return s.slice(0, 60);
+  }
+  // "Mr A & Mr B Surname" is two people, and each person gets their own pass
+  function splitPeople(name){
+    if (name.indexOf(' & ') < 0) return [name];
+    var parts = name.split(' & ').map(function(p){ return p.trim(); }).filter(Boolean);
+    if (parts.length < 2) return [name.replace(' & ', ' ')];
+    var last = parts[parts.length - 1].split(' '), surname = last[last.length - 1];
+    return parts.map(function(p, i){
+      if (i === parts.length - 1) return p;
+      var w = p.split(' ');
+      return w[w.length - 1] === surname ? p : p + ' ' + surname;
+    });
+  }
+  function isName(c){ return typeof c === 'string' && /[A-Za-zÀ-ɏḀ-ỿ]/.test(c); }
+  function sideOf(text){ var s = String(text == null ? '' : text).toLowerCase(); return /groom/.test(s) ? LISTS[0] : /bride/.test(s) ? LISTS[1] : null; }
+  function readPeople(rows){
+    // what a heading cell is for; long cells are sentences, not headings
+    function kind(c){
+      if (typeof c !== 'string') return '';
+      var h = c.trim().toLowerCase();
+      if (!h || h.length > 30) return '';
+      if (/^(entry )?code$/.test(h)) return 'code';
+      if (/phone|number|tel|mobile|email|table|seat|file|sent|note|arrived|whatsapp|^no\.?$/.test(h)) return '';
+      if (/^(list|side|whose guest|group|category|family)$/.test(h)) return 'list';
+      if (/groom|bride/.test(h)) return 'side';
+      if (/^(guest|guests|guest name|guest names|name|names|full name)$/.test(h)) return 'name';
+      return '';
+    }
+    // the heading row is the one with the most recognisable headings, so a title line above the table is not mistaken for it
+    var head = -1, best = 0;
+    for (var i = 0; i < Math.min(rows.length, 15); i++) {
+      var kinds = (rows[i] || []).map(kind).filter(Boolean);
+      var score = kinds.indexOf('name') >= 0 || kinds.indexOf('side') >= 0 ? kinds.length : 0;
+      if (score > best) { best = score; head = i; }
+    }
+    if (head < 0) return null;
+    var sideCols = [], nameCol = -1, listCol = -1, codeCol = -1;
+    (rows[head] || []).forEach(function(c, j){
+      var k = kind(c);
+      if (k === 'side') sideCols.push({col: j, list: sideOf(c)});
+      else if (k === 'name' && nameCol < 0) nameCol = j;
+      else if (k === 'list' && listCol < 0) listCol = j;
+      else if (k === 'code' && codeCol < 0) codeCol = j;
+    });
+    if (!sideCols.length && nameCol < 0) return null;
+    var people = [], splitRows = [];
+    function take(cell, list, code){
+      if (!isName(cell)) return;
+      var names = splitPeople(cleanName(cell));
+      if (names.length > 1) splitRows.push(cleanName(cell));
+      // an entry code in the file is kept, so a pass that was already sent keeps working
+      names.forEach(function(n){ if (n) people.push({name: n, list: list, code: names.length === 1 ? norm(code) : null}); });
+    }
+    // a column per side is read side by side; otherwise one name column with optional list and entry code columns
+    if (sideCols.length) sideCols.forEach(function(sc){ for (var r = head + 1; r < rows.length; r++) take((rows[r] || [])[sc.col], sc.list, null); });
+    else for (var r = head + 1; r < rows.length; r++) {
+      var row = rows[r] || [];
+      take(row[nameCol], listCol >= 0 ? sideOf(row[listCol]) : null, codeCol >= 0 ? row[codeCol] : null);
+    }
+    return {people: people, splitRows: splitRows};
+  }
+  function resetImport(text, tone){
+    pending = null; $('import-preview').hidden = true; $('import-pick').hidden = false; say('import-msg', text || '', tone);
+  }
+  function showImport(){
+    var list = pending.people, n = list.length, withList = list.filter(function(p){ return p.list; });
+    var groom = list.filter(function(p){ return p.list === LISTS[0]; }).length, bride = list.filter(function(p){ return p.list === LISTS[1]; }).length;
+    var noList = n - withList.length;
+    $('import-count').textContent = n + (n === 1 ? ' guest' : ' guests') + ' to add' + (pending.file ? ' from ' + pending.file : '') + '.';
+    var notes = $('import-notes'); notes.textContent = '';
+    if (groom || bride) notes.appendChild(el('li', '', groom + " groom's " + (groom === 1 ? 'guest' : 'guests') + ', ' + bride + " bride's " + (bride === 1 ? 'guest' : 'guests') + (noList ? ', ' + noList + ' with no list' : '') + '.'));
+    var keeping = list.filter(function(p){ return p.code && !guests.has(p.code); }).length;
+    if (keeping) notes.appendChild(el('li', '', keeping + (keeping === 1 ? ' guest keeps' : ' guests keep') + ' the entry code in the file, so passes already sent still work.'));
+    if (pending.skipped) notes.appendChild(el('li', '', pending.skipped + (pending.skipped === 1 ? ' name is' : ' names are') + ' already on the list and will be left as they are.'));
+    if (pending.splitRows.length) notes.appendChild(el('li', '', pending.splitRows.length + (pending.splitRows.length === 1 ? ' row names' : ' rows name') + ' two people, so each person gets their own pass: ' + pending.splitRows.slice(0, 3).join('; ') + (pending.splitRows.length > 3 ? ' and more' : '') + '.'));
+    if (pending.twins) notes.appendChild(el('li', '', pending.twins + (pending.twins === 1 ? ' name appears' : ' names appear') + ' more than once in the file. Each row still gets its own pass.'));
+    notes.appendChild(el('li', '', 'First in the file: ' + list.slice(0, 4).map(function(p){ return p.name; }).join(', ') + (n > 4 ? ' …' : '') + '.'));
+    $('import-default-field').hidden = !noList;
+    $('import-go').textContent = pending.retry ? 'Try the remaining ' + n : 'Add ' + n + (n === 1 ? ' guest' : ' guests');
+    $('import-go').disabled = false;
+    $('import-preview').hidden = false; $('import-pick').hidden = true;
+  }
+  $('import-file').addEventListener('change', async function(e){
+    var file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file || importing || !db) return;
+    resetImport('Reading ' + file.name + '.');
+    if (!/\.(xlsx|xls|csv)$/i.test(file.name)) { resetImport('Choose an Excel file ending in .xlsx (or a .csv file).', 'bad'); return; }
+    try { await loadSheetReader(); } catch (err) { resetImport('The Excel reader did not load. Check the signal and try again.', 'bad'); return; }
+    var found = null;
+    try {
+      var book = window.XLSX.read(await file.arrayBuffer(), {type: 'array'});
+      for (var i = 0; i < book.SheetNames.length && !(found && found.people.length); i++) {
+        var rows = window.XLSX.utils.sheet_to_json(book.Sheets[book.SheetNames[i]], {header: 1, raw: true, defval: null, blankrows: false});
+        var got = readPeople(rows); if (got) found = got;
+      }
+    } catch (err) { resetImport('That file could not be read. Save it as an Excel .xlsx file and try again.', 'bad'); return; }
+    if (!found) { resetImport('No guest column found. Put the names in a column headed Guest name (or one column each headed Groom and Bride) and try again.', 'bad'); return; }
+    if (!found.people.length) { resetImport('That sheet has the right headings but no names under them.', 'bad'); return; }
+    if (found.people.length > 1000) { resetImport('That file has ' + found.people.length + ' names. This page takes up to 1,000 guests.', 'bad'); return; }
+    var have = new Set(all().map(function(g){ return g.name.toLowerCase(); })), seen = new Set(), twins = 0;
+    var fresh = found.people.filter(function(p){ return !have.has(p.name.toLowerCase()); });
+    fresh.forEach(function(p){ var k = p.name.toLowerCase(); if (seen.has(k)) twins++; seen.add(k); });
+    if (!fresh.length) { resetImport('All ' + found.people.length + ' names in ' + file.name + ' are already on the list, so there is nothing to add.'); return; }
+    pending = {people: fresh, splitRows: found.splitRows, skipped: found.people.length - fresh.length, twins: twins, file: file.name, retry: false};
+    say('import-msg', ''); showImport();
+  });
+  $('import-cancel').addEventListener('click', function(){ if (!importing) resetImport(''); });
+  $('import-go').addEventListener('click', async function(){
+    if (!pending || importing || !db) return;
+    if (!window.qrcode || !window.jsQR) { say('import-msg', 'The pass maker did not load. Check the signal and reload the page.', 'bad'); return; }
+    importing = true; $('import-go').disabled = true;
+    var fallback = LISTS.indexOf($('import-default').value) >= 0 ? $('import-default').value : LISTS[0];
+    var taken = new Set(), no = 0, jobs = [], short = false;
+    guests.forEach(function(g){ if (g.no > no) no = g.no; });
+    pending.people.forEach(function(p){
+      var code = p.code && !guests.has(p.code) && !taken.has(p.code) ? p.code : newCode(taken);
+      if (!code) { short = true; return; }
+      taken.add(code);
+      jobs.push({no: ++no, name: p.name, list: p.list || fallback, code: code, checkedInAt: 0});
+    });
+    if (short) { importing = false; $('import-go').disabled = false; say('import-msg', 'Could not make enough entry codes. Try again.', 'bad'); return; }
+    var queue = jobs.slice(), done = 0, failed = [];
+    function put(j){ return db.collection('guests').doc(j.code).set(j); }
+    async function worker(){
+      while (queue.length) {
+        var j = queue.shift();
+        try { await put(j); } catch (e1) { try { await sleep(500); await put(j); } catch (e2) { failed.push(j); } }
+        done++; say('import-msg', 'Adding guests: ' + done + ' of ' + jobs.length + '.');
+      }
+    }
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    importing = false;
+    var added = jobs.length - failed.length;
+    if (failed.length) {
+      pending = {people: failed.map(function(j){ return {name: j.name, list: j.list, code: j.code}; }), splitRows: [], skipped: 0, twins: 0, file: '', retry: true};
+      showImport();
+      say('import-msg', added + ' added. ' + failed.length + ' could not be added. Check the signal, then try the remaining ones.', 'bad');
+    } else {
+      importOpen = false; resetImport('');
+      say('m-msg', 'Added ' + added + (added === 1 ? ' guest' : ' guests') + '. Each has their own QR code below, ready to download or share.', 'good');
+    }
+    render();
+  });
+  $('import-template').addEventListener('click', async function(){
+    if (!saver) { say('import-msg', 'This device cannot save files from here. Use any Excel sheet with a column headed Guest name and a column headed List.', 'bad'); return; }
+    try { await loadSheetReader(); } catch (err) { say('import-msg', 'The Excel reader did not load. Check the signal and try again.', 'bad'); return; }
+    try {
+      var X = window.XLSX, sheet = X.utils.aoa_to_sheet([['Guest name', 'List']]), book = X.utils.book_new();
+      sheet['!cols'] = [{wch: 36}, {wch: 18}];
+      X.utils.book_append_sheet(book, sheet, 'Guests');
+      await saver.save({filename: 'Guest list template.xlsx', data: new Uint8Array(X.write(book, {bookType: 'xlsx', type: 'array'}))});
+      say('import-msg', 'Template saved. Put one guest on each row, with Groom or Bride in the List column, then upload it here.', 'good');
+    } catch (err) { say('import-msg', err && err.code === 'declined' ? 'Not saved.' : 'Could not save the template here.', err && err.code === 'declined' ? '' : 'bad'); }
+  });
+  $('import-close').addEventListener('click', function(){ if (importing) return; importOpen = false; resetImport(''); renderAdmin(); });
+  $('open-import').addEventListener('click', function(){
+    closeSettings(); importOpen = true; resetImport(''); renderAdmin();
+    try { $('import').scrollIntoView({block: 'start'}); } catch (e) {}
+  });
+
+  /* ---------- drawing a pass, to match the printed ones: 100 x 150 mm at 300 dpi ---------- */
+  var PW = 1181, PH = 1772, MM = PW / 100, PT = 300 / 72;
+  var C = {paper: '#FBF7EE', ink: '#33221A', muted: '#6C594B', wine: '#6B1626', wineDeep: '#4F0F1B', onWine: '#FBF3E2', onWineSoft: '#EAD9C6', line: '#D9BFBC'};
+  function up(mmFromBottom){ return PH - mmFromBottom * MM; }
+  function face(style, weight, pt, family){ return style + ' ' + weight + ' ' + (pt * PT).toFixed(2) + 'px ' + family; }
+  var PLAY = '"Playfair Display", Didot, Georgia, serif', JOST = 'Jost, Futura, "Century Gothic", sans-serif';
+  function centred(ctx, text, mmUp, font, colour){
+    ctx.font = font; ctx.fillStyle = colour; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText(text, PW / 2, up(mmUp));
+  }
+  function spaced(ctx, text, mmUp, font, colour, spacePt){
+    ctx.font = font; ctx.fillStyle = colour; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    var gap = spacePt * PT, widths = [], total = 0;
+    for (var i = 0; i < text.length; i++) { var w = ctx.measureText(text[i]).width; widths.push(w); total += w; }
+    total += gap * (text.length - 1);
+    var x = (PW - total) / 2, y = up(mmUp);
+    for (var k = 0; k < text.length; k++) { ctx.fillText(text[k], x, y); x += widths[k] + gap; }
+  }
+  var crestPictures = {};
+  function loadCrest(colour){
+    if (!crestPictures[colour]) crestPictures[colour] = new Promise(function(res){
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="245 150 510 490" width="1020" height="980" style="color:' + colour + '">' + $('crest').innerHTML + '</svg>';
+      var img = new Image();
+      img.onload = function(){ res(img); };
+      img.onerror = function(){ res(null); };
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    });
+    return crestPictures[colour];
+  }
+  // letter-spaced capitals that shrink to stay inside the pass if the text is long
+  function spacedFit(ctx, text, mmUp, weight, pt, colour, spacePt, maxMm){
+    for (var i = 0; i < 30; i++) {
+      ctx.font = face('normal', weight, pt, JOST);
+      var total = spacePt * PT * (text.length - 1);
+      for (var k = 0; k < text.length; k++) total += ctx.measureText(text[k]).width;
+      if (total <= maxMm * MM) break;
+      pt *= 0.96; spacePt *= 0.94;
+    }
+    spaced(ctx, text, mmUp, face('normal', weight, pt, JOST), colour, spacePt);
+  }
+  async function drawPass(g){
+    try {
+      await Promise.race([Promise.all([
+        document.fonts.load(face('normal', 400, 21, PLAY), g.name), document.fonts.load(face('italic', 400, 10.5, PLAY), 'This pass admits'),
+        document.fonts.load(face('normal', 400, 6, JOST), 'A'), document.fonts.load(face('normal', 500, 6, JOST), 'A'),
+        document.fonts.load('400 168px ' + PLAY, coupleLine('&').toUpperCase() + ' 0123456789')]), sleep(4000)]);
+    } catch (e) {}
+    var crest = null;
+    var c = document.createElement('canvas'); c.width = PW; c.height = PH;
+    var ctx = c.getContext('2d');
+    ctx.fillStyle = C.paper; ctx.fillRect(0, 0, PW, PH);
+    // the burgundy strip that carries the date on the website
+    ctx.fillStyle = C.wine; ctx.fillRect(0, up(15), PW, 15 * MM);
+    var stripDate = whenLine().toUpperCase(), stripVenue = cfg.venue.toUpperCase();
+    if (stripDate) spacedFit(ctx, stripDate, stripVenue ? 8.7 : 6.6, 500, 6.5, C.onWine, 1.5, 90);
+    if (stripVenue) spacedFit(ctx, stripVenue, stripDate ? 4.6 : 6.6, 400, 5.6, C.onWineSoft, 1.3, 90);
+    ctx.strokeStyle = C.wine; ctx.lineWidth = 0.5 * PT;
+    ctx.strokeRect(5 * MM, up(145), 90 * MM, 125.5 * MM);
+    var cw = 29 * MM, ch = cw * 490 / 510;
+    if (crest) ctx.drawImage(crest, (PW - cw) / 2, up(141.5), cw, ch);
+    else if (cfg.name1) drawCrest(ctx, (PW - cw) / 2, up(141.5), cw, C.wine);
+    if (cfg.type) spacedFit(ctx, cfg.type.toUpperCase(), 108, 500, 6.6, C.wine, 2.3, 80);
+    centred(ctx, 'This pass admits', 101.2, face('italic', 400, 10.5, PLAY), C.wine);
+
+    // the name: one line if it fits, otherwise two balanced lines
+    var maxW = 80 * MM, lines = [g.name], size = 0;
+    function fits(text, pt){ ctx.font = face('normal', 400, pt, PLAY); return ctx.measureText(text).width <= maxW; }
+    for (var s = 21; s >= 17 && !size; s--) if (fits(g.name, s)) size = s;
+    if (!size) {
+      var words = g.name.split(' '), best = null;
+      ctx.font = face('normal', 400, 10, PLAY);
+      for (var i = 1; i < words.length; i++) {
+        var a = words.slice(0, i).join(' '), b = words.slice(i).join(' ');
+        var d = Math.abs(ctx.measureText(a).width - ctx.measureText(b).width);
+        if (!best || d < best.d) best = {d: d, lines: [a, b]};
+      }
+      lines = best ? best.lines : [g.name];
+      for (var t = 17; t >= 11 && !size; t--) if (lines.every(function(l){ return fits(l, t); })) size = t;
+      if (!size) size = 11;
+    }
+    if (lines.length === 1) centred(ctx, lines[0], 92.4, face('normal', 400, size, PLAY), C.ink);
+    else {
+      centred(ctx, lines[0], 94.6, face('normal', 400, size, PLAY), C.ink);
+      ctx.fillText(lines[1], PW / 2, up(94.6) + size * 1.16 * PT);
+    }
+
+    var side = 47 * MM, x0 = (PW - side) / 2, y0 = up(85.5);
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(x0, y0, side, side);
+    ctx.strokeStyle = C.line; ctx.lineWidth = 0.6 * PT; ctx.strokeRect(x0, y0, side, side);
+    var m = qrMatrix(g.code), n = m.length, cell = side / (n + 8);
+    ctx.fillStyle = C.wineDeep;
+    for (var r = 0; r < n; r++) for (var k = 0; k < n; k++) if (m[r][k]) {
+      var px = Math.round(x0 + (k + 4) * cell), py = Math.round(y0 + (r + 4) * cell);
+      ctx.fillRect(px, py, Math.round(x0 + (k + 5) * cell) - px, Math.round(y0 + (r + 5) * cell) - py);
+    }
+    spaced(ctx, 'ENTRY CODE', 33.6, face('normal', 500, 5.8, JOST), C.muted, 2.0);
+    spaced(ctx, g.code, 28.0, face('normal', 500, 13.5, JOST), C.ink, 2.4);
+    centred(ctx, 'Show this code at the entrance. It admits one person, once.', 23.2, face('normal', 400, 6.3, JOST), C.muted);
+
+    // read the finished pass back before anyone is handed it
+    var check = ctx.getImageData(Math.round(x0), Math.round(y0), Math.round(side), Math.round(side));
+    var hit = window.jsQR(check.data, check.width, check.height);
+    if (!hit || hit.data !== g.code) throw new Error('unreadable');
+    return c;
+  }
+  async function passBlob(g){
+    var canvas = await drawPass(g);
+    return await new Promise(function(res, rej){ canvas.toBlob(function(b){ b ? res(b) : rej(new Error('blob')); }, 'image/png'); });
+  }
+  async function savePass(g, blob, msgId){
+    if (!saver) { say(msgId, 'This device cannot save files from here. Tap the QR code, then press and hold the picture to save it.', 'bad'); return false; }
+    try { await saver.save({filename: fileName(g), data: blob}); say(msgId, 'Saved the pass for ' + g.name + '.', 'good'); return true; }
+    catch (err) {
+      if (err && err.code === 'declined') say(msgId, 'Not saved.');
+      else if (err && err.code === 'rate_limited') say(msgId, 'A save is already waiting for your answer.', 'bad');
+      else say(msgId, 'This device cannot save the file here. Tap the QR code, then press and hold the picture to save it.', 'bad');
+      return false;
+    }
+  }
+  async function sharePass(g, blob, msgId){
+    var file = null, can = false;
+    try { file = new File([blob], fileName(g), {type: 'image/png'}); } catch (e) {}
+    try { can = !!file && !!navigator.share && !!navigator.canShare && navigator.canShare({files: [file]}); } catch (e) {}
+    if (can) {
+      try { await navigator.share({files: [file], title: cfg.type + ' pass for ' + g.name}); say(msgId, 'Shared the pass for ' + g.name + '.', 'good'); return; }
+      catch (err) { if (err && err.name === 'AbortError') { say(msgId, 'Not shared.'); return; } }
+    }
+    // where this page is not allowed to open the share sheet itself, hand the file over to be saved or shared from there
+    if (await savePass(g, blob, msgId)) say(msgId, 'The pass for ' + g.name + ' was saved. Share it from your photos or files.', 'good');
+  }
+  function fileName(g){ return ('00' + g.no).slice(-3) + ' ' + g.name.replace(/[^A-Za-z0-9 '\-]/g, '').trim() + '.png'; }
+  async function openPass(g){
+    var dlg = $('pass-dialog');
+    closePass();
+    $('pass-title').textContent = 'Pass for ' + g.name;
+    $('pass-img').removeAttribute('src'); $('pass-img').alt = 'Pass for ' + g.name + ', entry code ' + g.code;
+    $('pass-save').disabled = true; $('pass-share').disabled = true;
+    $('pass-save').hidden = !saver; $('pass-share').hidden = !saver && !navigator.share; $('pass-hint').hidden = !!saver;
+    say('pass-msg', 'Drawing the pass.');
+    if (dlg.showModal) { try { dlg.showModal(); } catch (e) { dlg.setAttribute('open', ''); } } else dlg.setAttribute('open', '');
+    if (!window.qrcode || !window.jsQR) { say('pass-msg', 'The pass maker did not load. Check the signal and reload the page.', 'bad'); return; }
+    try {
+      var blob = await passBlob(g);
+      var url = URL.createObjectURL(blob);
+      passOpen = {guest: g, blob: blob, url: url};
+      $('pass-img').src = url;
+      $('pass-save').disabled = false; $('pass-share').disabled = false;
+      say('pass-msg', 'Entry code ' + g.code + '. This pass works at the door as soon as you send it.');
+    } catch (err) {
+      say('pass-msg', 'Could not draw this pass. Reload the page and try again.', 'bad');
+    }
+  }
+  function closePass(){
+    var dlg = $('pass-dialog');
+    if (passOpen) { try { URL.revokeObjectURL(passOpen.url); } catch (e) {} passOpen = null; }
+    if (dlg.open) { if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); }
+  }
+  $('pass-close').addEventListener('click', closePass);
+  $('pass-dialog').addEventListener('close', function(){ if (passOpen) { try { URL.revokeObjectURL(passOpen.url); } catch (e) {} passOpen = null; } });
+  $('pass-save').addEventListener('click', async function(){ if (passOpen) await savePass(passOpen.guest, passOpen.blob, 'pass-msg'); });
+  $('pass-share').addEventListener('click', async function(){ if (passOpen) await sharePass(passOpen.guest, passOpen.blob, 'pass-msg'); });
+
+  /* ---------- the whole list: download, clear a test run ---------- */
+  function cell(v){
+    v = String(v == null ? '' : v);
+    if (/^[=+\-@]/.test(v)) v = "'" + v;            // keep spreadsheets from reading a name as a formula
+    return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  }
+  $('csv').addEventListener('click', async function(){
+    if (!saver) { say('reset-msg', 'This device cannot save files from here.', 'bad'); return; }
+    var lines = [['No.', 'Guest', 'List', 'Entry code', 'Arrived', 'Arrived at'].join(',')];
+    all().sort(function(a, b){ return a.no - b.no; }).forEach(function(g){
+      lines.push([g.no, g.name, g.list, g.code, g.checkedInAt ? 'Yes' : 'No', g.checkedInAt ? new Date(g.checkedInAt).toLocaleString() : ''].map(cell).join(','));
+    });
+    try { await saver.save({filename: (coupleLine('and') + ' guest list').replace(/[^A-Za-z0-9 '\-]/g, '').trim() + '.csv', data: '﻿' + lines.join('\r\n') + '\r\n'}); say('reset-msg', 'Guest list saved.', 'good'); }
+    catch (err) { say('reset-msg', err && err.code === 'declined' ? 'Not saved.' : 'Could not save the guest list here.', err && err.code === 'declined' ? '' : 'bad'); }
+  });
+  function resetStep(confirming){ $('reset-confirm').hidden = !confirming; $('reset').disabled = confirming; }
+  $('reset').addEventListener('click', function(){ say('reset-msg', ''); resetStep(true); });
+  $('reset-no').addEventListener('click', function(){ resetStep(false); });
+  $('reset-yes').addEventListener('click', async function(){
+    if (resetting || !db) return;
+    resetting = true; resetStep(false);
+    var used = all().filter(function(g){ return g.checkedInAt; }), done = 0, failedN = 0;
+    for (var i = 0; i < used.length; i++) {
+      say('reset-msg', 'Clearing ' + (i + 1) + ' of ' + used.length + '.');
+      try { await db.collection('guests').doc(used[i].code).update({checkedInAt: 0}); done++; } catch (e) { failedN++; }
+    }
+    say('reset-msg', failedN ? done + ' cleared, ' + failedN + ' could not be cleared. Try again.'
+      : done ? 'Cleared ' + done + ' check-in' + (done === 1 ? '' : 's') + '. Every pass is unused again.' : 'There were no check-ins to clear.', failedN ? 'bad' : 'good');
+    showReady();
+    resetting = false;
+  });
+
+  /* ================= switching between the door and the guest list ================= */
+  function render(){ renderTally(); if (mode === 'admin') renderAdmin(); else renderDoor(); }
+  function setMode(m){
+    mode = m === 'admin' && unlocked ? 'admin' : 'door';
+    if (mode !== 'door') stopCamera();
+    $('door').hidden = mode !== 'door'; $('admin').hidden = mode !== 'admin';
+    $('page-title').textContent = mode === 'admin' ? 'Guest list' : 'Guest check-in';
+    $('switch').textContent = mode === 'admin' ? 'Door check-in' : 'Manage guests';
+    $('open-settings').hidden = mode !== 'admin';
+    render();
+  }
+  $('switch').addEventListener('click', function(){
+    if (mode === 'admin') { leaveManager(); return; }
+    askForManager();
+  });
+
+  /* ================= the passcode on Manage guests ================= */
+  // Only a salted, stretched fingerprint of the passcode is saved, never the six digits.
+  var ROUNDS = 150000;
+  function hex(bytes){ var s = ''; for (var i = 0; i < bytes.length; i++) s += ('0' + bytes[i].toString(16)).slice(-2); return s; }
+  function unhex(s){ var a = new Uint8Array(s.length / 2); for (var i = 0; i < a.length; i++) a[i] = parseInt(s.substr(i * 2, 2), 16); return a; }
+  async function fingerprint(pin, saltHex, rounds){
+    var key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveBits']);
+    var bits = await crypto.subtle.deriveBits({name: 'PBKDF2', hash: 'SHA-256', salt: unhex(saltHex), iterations: rounds}, key, 256);
+    return hex(new Uint8Array(bits));
+  }
+  async function matchesLock(pin){
+    return !!lock && (await fingerprint(pin, lock.salt, lock.rounds)) === lock.hash;
+  }
+  async function readLock(){
+    var snap = await db.doc('settings/manager').get();
+    var d = snap.exists ? snap.data() : null;
+    lock = d && d.salt && d.hash ? {salt: String(d.salt), hash: String(d.hash), rounds: Number(d.rounds) || ROUNDS} : null;
+    return lock;
+  }
+  function waitLeft(){ return Math.max(0, Math.ceil((lockedUntil - Date.now()) / 1000)); }
+  function openGate(text, tone, canType){
+    var dlg = $('gate');
+    $('gate-pin').value = ''; $('gate-field').hidden = !canType; $('gate-go').hidden = !canType;
+    say('gate-msg', text || '', tone);
+    if (!dlg.open) { if (dlg.showModal) { try { dlg.showModal(); } catch (e) { dlg.setAttribute('open', ''); } } else dlg.setAttribute('open', ''); }
+    if (canType) $('gate-pin').focus();
+  }
+  function closeGate(){ var dlg = $('gate'); $('gate-pin').value = ''; if (dlg.open) { if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); } }
+  async function askForManager(){
+    if (!db) { openGate('Sign in with Google first. Manage guests opens for organisers.', '', false); return; }
+    if (!isOwner) { openGate(canWrite ? 'Only an organiser can manage guests. This account can scan passes at the door.' : 'This account has not been invited to this guest list.', '', false); return; }
+    if (!window.crypto || !crypto.subtle) { openGate('This browser cannot check a passcode. Open the page in an up-to-date browser.', 'bad', false); return; }
+    try { await readLock(); } catch (e) { openGate('Could not reach the guest list. Check the signal and try again.', 'bad', false); return; }
+    if (!lock) {
+      // No passcode yet: the couple's own account goes straight in and is asked to set one.
+      if (isOwner) { enterManager(); return; }
+      enterManager();
+      return;
+    }
+    openGate(waitLeft() ? 'Too many wrong tries. Wait ' + waitLeft() + ' seconds.' : '', waitLeft() ? 'bad' : '', true);
+  }
+  $('gate-cancel').addEventListener('click', closeGate);
+  $('begin-go').addEventListener('click', askForManager);
+  $('gate-form').addEventListener('submit', async function(e){
+    e.preventDefault();
+    var pin = $('gate-pin').value.trim();
+    if (waitLeft()) { say('gate-msg', 'Too many wrong tries. Wait ' + waitLeft() + ' seconds.', 'bad'); return; }
+    if (!/^[0-9]{6}$/.test(pin)) { say('gate-msg', 'The passcode is 6 digits.', 'bad'); return; }
+    $('gate-go').disabled = true;
+    var ok = false;
+    try { ok = await matchesLock(pin); } catch (err) {}
+    $('gate-go').disabled = false;
+    if (!ok) {
+      wrong += 1; $('gate-pin').value = '';
+      if (wrong >= 5) {
+        wrong = 0; lockedUntil = Date.now() + 60000;
+        try { localStorage.setItem('gate-wait', String(lockedUntil)); } catch (err) {}
+        say('gate-msg', 'Too many wrong tries. Wait 60 seconds.', 'bad');
+      } else say('gate-msg', 'Wrong passcode. ' + (5 - wrong) + (5 - wrong === 1 ? ' try' : ' tries') + ' left.', 'bad');
+      return;
+    }
+    wrong = 0; closeGate(); enterManager();
+  });
+  function enterManager(){
+    unlocked = true; setMode('admin'); renderLock(); window.scrollTo(0, 0);
+  }
+  function leaveManager(){
+    // going back to the door locks the manager again
+    unlocked = false; rowState = null; closePass(); closeSettings();
+    if (!importing) { importOpen = false; resetImport(''); }
+    setMode('door'); window.scrollTo(0, 0);
+  }
+  function openSettings(toPasscode){
+    var dlg = $('settings');
+    renderLock(); say('lock-msg', ''); say('reset-msg', ''); resetStep(false);
+    fillEventForm(); renderSwatches(); renderStaff(); say('event-msg', ''); say('theme-msg', ''); say('staff-msg', '');
+    if (!dlg.open) { if (dlg.showModal) { try { dlg.showModal(); } catch (e) { dlg.setAttribute('open', ''); } } else dlg.setAttribute('open', ''); }
+    if (toPasscode === true && isOwner) { var box = $(lock ? 'lock-old' : 'lock-new'); try { box.scrollIntoView({block: 'center'}); } catch (e) {} box.focus(); }
+    else { try { dlg.scrollTop = 0; } catch (e) {} $('settings-close').focus(); }
+  }
+  function closeSettings(){
+    var dlg = $('settings');
+    ['lock-old', 'lock-new', 'lock-again'].forEach(function(id){ $(id).value = ''; });
+    if (dlg.open) { if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); }
+  }
+  ['lock-old', 'lock-new', 'lock-again', 'gate-pin'].forEach(function(id){
+    $(id).addEventListener('input', function(e){ var d = e.target.value.replace(/[^0-9]/g, '').slice(0, 6); if (d !== e.target.value) e.target.value = d; });
+  });
+  $('open-settings').addEventListener('click', function(){ openSettings(false); });
+  $('lock-nudge-go').addEventListener('click', function(){ openSettings(true); });
+  $('event-nudge-go').addEventListener('click', function(){ openSettings(false); });
+  $('settings-close').addEventListener('click', closeSettings);
+  function renderLock(){
+    $('lock-form').hidden = !isOwner;
+    $('lock-nudge').hidden = !(isOwner && !lock);
+    $('lock-old-field').hidden = !lock;
+    $('lock-go').textContent = lock ? 'Change passcode' : 'Set passcode';
+    $('lock-state').textContent = !isOwner ? 'Manage guests opens with a 6-digit passcode. Only an organiser can change it.'
+      : lock ? 'Manage guests asks for your 6-digit passcode every time it is opened. Going back to the door locks it again.'
+      : 'No passcode yet. Choose 6 digits; you will be asked for them each time Manage guests is opened.';
+    $('lock-state').className = 'hint';
+  }
+  $('lock-form').addEventListener('submit', async function(e){
+    e.preventDefault();
+    if (!db || !isOwner) return;
+    var old = $('lock-old').value.trim(), pin = $('lock-new').value.trim(), again = $('lock-again').value.trim();
+    if (!/^[0-9]{6}$/.test(pin)) { say('lock-msg', 'Choose a passcode of exactly 6 digits.', 'bad'); return; }
+    if (pin !== again) { say('lock-msg', 'The two new passcodes do not match.', 'bad'); return; }
+    $('lock-go').disabled = true;
+    try {
+      if (lock && !(await matchesLock(old))) { say('lock-msg', 'The current passcode is wrong.', 'bad'); $('lock-go').disabled = false; return; }
+      var salt = new Uint8Array(16); crypto.getRandomValues(salt);
+      var rec = {salt: hex(salt), hash: await fingerprint(pin, hex(salt), ROUNDS), rounds: ROUNDS, setAt: Date.now()};
+      await db.doc('settings/manager').set(rec);
+      lock = {salt: rec.salt, hash: rec.hash, rounds: rec.rounds};
+      ['lock-old', 'lock-new', 'lock-again'].forEach(function(id){ $(id).value = ''; });
+      renderLock();
+      say('lock-msg', 'Passcode saved. You will be asked for it the next time you open Manage guests.', 'good');
+    } catch (err) {
+      say('lock-msg', 'Could not save the passcode. Check the signal and try again.', 'bad');
+    }
+    $('lock-go').disabled = false;
+  });
+
+  /* ================= connect to the shared guest list ================= */
+  function notice(text){ var n = $('notice'); n.textContent = text; n.hidden = !text; }
+  async function start(){
+    try { var kept = JSON.parse(localStorage.getItem('event-cfg') || 'null'); if (kept) cfg = cleanCfg(kept); } catch (e) {}
+    applyAll();
+    render();
+    var site = window.site, claude = window.claude;
+    function shut(){ loaded = true; noData = true; $('scan-acts').hidden = true; $('code-form').hidden = true; render(); }
+    if (!site || !claude) { shut(); notice('This page did not load completely. Check the signal and reload.'); return; }
+    var who = await site.state;
+    var got = await Promise.all([claude.use('db'), claude.use('user'), claude.use('downloads')]);
+    db = got[0]; var user = got[1]; saver = got[2];
+    if (!who.configured) {
+      shut();
+      notice('This site is not connected to its database yet. Paste your Firebase details into firebase-config.js, then reload.');
+      return;
+    }
+    if (!db) { shut(); $('signin').hidden = false; return; }
+    myEmail = who.email || '';
+    $('who-email').textContent = myEmail; $('who').hidden = false;
+    try { isOwner = await user.isOwner(); } catch (e) {}
+    try { canWrite = (await user.can('data.write')) !== false; } catch (e) {}
+    if (!isOwner && !canWrite) {
+      noAccess = true; shut();
+      notice(myEmail + ' has not been invited to this guest list. Ask an organiser to add this Gmail address in Settings, then reload.');
+      return;
+    }
+    $('switch').hidden = !isOwner;   // door helpers only scan
+    try { lockedUntil = Number(localStorage.getItem('gate-wait')) || 0; } catch (e) {}
+    renderSwatches();
+    db.doc('settings/event').onSnapshot(function(snap){
+      eventSaved = !!snap.exists;
+      cfg = cleanCfg(snap.exists ? snap.data() : null);
+      try { localStorage.setItem('event-cfg', JSON.stringify(cfg)); } catch (e) {}
+      applyAll();
+    }, function(){});
+    if (isOwner) db.collection('staff').onSnapshot(function(snap){
+      staff = snap.docs.map(function(d){ var s = d.data() || {}; return {email: d.id, role: s.role === 'organiser' ? 'organiser' : 'door'}; })
+        .sort(function(a, b){ return a.role === b.role ? (a.email < b.email ? -1 : 1) : (a.role === 'organiser' ? -1 : 1); });
+      renderStaff();
+    }, function(){});
+    if (isOwner && location.hash === '#admin') askForManager();
+    db.collection('guests').onSnapshot(function(snap){
+      guests.clear();
+      snap.docs.forEach(function(d){
+        var g = d.data(); if (!g || !g.name) return;
+        guests.set(d.id, {code: d.id, name: String(g.name), list: String(g.list || ''), no: Number(g.no) || 0, checkedInAt: Number(g.checkedInAt) || 0});
+      });
+      loaded = true;
+      if (importing) { clearTimeout(paint); paint = setTimeout(render, 300); } else render();
+    }, function(){
+      notice('The live guest list stopped updating. Check the signal and reload the page.');
+    });
+  }
+  start();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+rules_version = '2';
+
+// Who may read and change what in the guest check-in database.
+//
+// Everyone signs in with a Google account. What an account may do is decided by its
+// entry in the "staff" collection, whose document ID is the account's email address:
+//   role "organiser"  manage guests, settings and the staff list, and check guests in
+//   role "door"       read the guest list and check a guest in, nothing else
+// An account with no staff entry can read and change nothing.
+//
+// The very first organiser is created by hand in the Firebase console (see README.md).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email_verified == true;
+    }
+    function staffPath() {
+      return /databases/$(database)/documents/staff/$(request.auth.token.email);
+    }
+    function isStaff() {
+      return signedIn() && exists(staffPath());
+    }
+    function isOrganiser() {
+      return isStaff() && get(staffPath()).data.role == 'organiser';
+    }
+
+    // A door helper may make exactly one kind of change: mark an unused pass as used.
+    function onlyChecksIn() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['checkedInAt'])
+        && resource.data.checkedInAt == 0
+        && request.resource.data.checkedInAt is number
+        && request.resource.data.checkedInAt > 0;
+    }
+
+    // One document per guest; the document ID is the entry code printed on their pass.
+    match /guests/{code} {
+      allow read: if isStaff();
+      allow create, delete: if isOrganiser();
+      allow update: if isOrganiser() || (isStaff() && onlyChecksIn());
+    }
+
+    // Event details, colour theme and the Manage guests passcode fingerprint.
+    match /settings/{name} {
+      allow read: if isStaff();
+      allow write: if isOrganiser();
+    }
+
+    // The people who can sign in. An organiser cannot change or remove their own entry,
+    // so the last organiser can never lock themselves out by mistake.
+    match /staff/{email} {
+      allow get: if signedIn() && request.auth.token.email == email;
+      allow list: if isOrganiser();
+      allow create, update, delete: if isOrganiser() && request.auth.token.email != email;
+    }
+  }
+}
