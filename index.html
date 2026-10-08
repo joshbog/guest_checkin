@@ -181,6 +181,14 @@ button,input,select{font:inherit;color:inherit}
 .status.in{color:var(--ok)}
 .m-main .status{margin-top:3px}
 .m-acts{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:2px 20px}
+/* selecting several guests to remove at once */
+.sel-bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:12;display:grid;gap:10px;padding-block:10px;background:var(--paper);border-bottom:1px solid var(--line)}
+.sel-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px}
+.sel-count{font:500 .8rem/1.3 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--ink);font-variant-numeric:tabular-nums;margin-right:auto}
+.sel-row .icon-btn{margin-left:-6px}
+.manage li.picking{grid-template-columns:auto auto minmax(0,1fr);cursor:pointer}
+.manage li.picking.on{background:var(--tab-on)}
+.m-pick{width:22px;height:22px;margin:0 2px 0 4px;accent-color:var(--accent);cursor:pointer}
 .m-form{grid-column:1 / -1;display:grid;gap:10px;padding:14px;border:1px solid var(--line);background:var(--banner)}
 .m-form p{color:var(--ink)}
 /* ---------- settings: a page with breadcrumbs and a sticky tab bar ---------- */
@@ -407,6 +415,7 @@ dialog.pass::backdrop{background:var(--veil)}
       <button type="button" class="chip" id="f-in" data-f="in" aria-pressed="false">Arrived<b id="c-in">0</b></button>
       <button type="button" class="chip" id="f-out" data-f="out" aria-pressed="false">Not arrived<b id="c-out">0</b></button>
     </div>
+    <button class="btn ghost small" type="button" id="sel-start">Select guests</button>
   </section>
 
   <section class="add">
@@ -432,6 +441,21 @@ dialog.pass::backdrop{background:var(--veil)}
   </section>
 
   <section aria-label="Guests">
+    <div class="sel-bar" id="sel-bar" hidden>
+      <div class="sel-row">
+        <p class="sel-count" id="sel-count" role="status">0 selected</p>
+        <button class="link" type="button" id="sel-all">Select all shown</button>
+        <button class="btn small" type="button" id="sel-remove" disabled>Remove selected</button>
+        <button class="icon-btn" type="button" id="sel-close" aria-label="Stop selecting"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false"><path d="M4 4 16 16M16 4 4 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></button>
+      </div>
+      <div class="m-form" id="sel-confirm" hidden>
+        <p id="sel-confirm-text"></p>
+        <div class="row">
+          <button class="btn small" type="button" id="sel-yes">Remove</button>
+          <button class="btn ghost small" type="button" id="sel-no">Keep them</button>
+        </div>
+      </div>
+    </div>
     <p class="msg" id="m-msg" role="status"></p>
     <ol class="rows manage" id="m-rows"></ol>
     <p class="empty" id="m-empty">Opening the guest list.</p>
@@ -695,6 +719,7 @@ dialog.pass::backdrop{background:var(--veil)}
   var loaded = false, db = null, saver = null, busy = false, isOwner = false, canWrite = true;
   var mode = 'door', view = 'in', find = '', resetting = false;
   var q = '', filt = 'all', rowState = null, dupOk = '', passOpen = null;
+  var picking = false, picked = new Set(), removing = false;   // selecting guests to remove several at once
   var importOpen = false, pending = null, importing = false, sheetReader = null, paint = 0;
   var noData = false;   // true when this device cannot open the guest list at all (signed out, or not invited)
   var noAccess = false, myEmail = '', staff = [];
@@ -1242,6 +1267,13 @@ dialog.pass::backdrop{background:var(--veil)}
     rows.textContent = '';
     shown.forEach(function(g){
       var li = el('li'); li.dataset.code = g.code;
+      if (picking) {
+        var on = picked.has(g.code);
+        li.className = 'picking' + (on ? ' on' : '');
+        var box = el('input', 'm-pick'); box.type = 'checkbox'; box.checked = on; box.dataset.pick = '1';
+        box.setAttribute('aria-label', 'Select ' + g.name);
+        li.appendChild(box);
+      }
       var thumb = el('button', 'm-qr'); thumb.type = 'button'; thumb.dataset.act = 'pass';
       thumb.setAttribute('aria-label', 'View the pass for ' + g.name);
       var art = qrThumb(g.code); if (art) thumb.appendChild(art);
@@ -1254,7 +1286,9 @@ dialog.pass::backdrop{background:var(--veil)}
       main.appendChild(el('span', 'status' + (g.checkedInAt ? ' in' : ''), g.checkedInAt ? 'Arrived ' + clock(g.checkedInAt) : 'Not arrived'));
       li.appendChild(main);
 
-      if (rowState && rowState.code === g.code && rowState.mode === 'edit') {
+      if (picking) {
+        // while selecting, a row only selects; its own buttons come back afterwards
+      } else if (rowState && rowState.code === g.code && rowState.mode === 'edit') {
         var form = el('form', 'm-form'); form.noValidate = true; form.dataset.form = 'edit';
         var lab = el('label', 'label', 'Guest name'); lab.htmlFor = 'edit-name';
         var input = el('input', 'text-in'); input.id = 'edit-name'; input.type = 'text'; input.maxLength = 60; input.autocomplete = 'off'; input.value = rowState.name;
@@ -1296,12 +1330,67 @@ dialog.pass::backdrop{background:var(--veil)}
     });
     if (keep && $('edit-name')) { var again = $('edit-name'); again.focus(); try { again.setSelectionRange(keep[0], keep[1]); } catch (e) {} }
 
+    renderPicking(shown);
     var empty = $('m-empty');
     empty.hidden = shown.length > 0 || none;
     empty.textContent = !loaded ? 'Opening the guest list.'
       : !list.length ? 'The guest list is empty.'
       : 'No guest matches that search.';
   }
+
+  /* ---------- selecting several guests and removing them together ---------- */
+  function renderPicking(shown){
+    $('sel-bar').hidden = !picking;
+    $('sel-start').hidden = picking;
+    if (!picking) return;
+    picked.forEach(function(c){ if (!guests.has(c)) picked.delete(c); });
+    var n = picked.size, allShown = shown.length > 0 && shown.every(function(g){ return picked.has(g.code); });
+    $('sel-count').textContent = n + ' selected';
+    $('sel-all').textContent = allShown ? 'Clear selection' : 'Select all shown (' + shown.length + ')';
+    $('sel-all').dataset.mode = allShown ? 'clear' : 'all';
+    $('sel-all').disabled = removing || (!shown.length && !n);
+    $('sel-remove').disabled = removing || !n;
+    $('sel-remove').textContent = n ? 'Remove ' + n + (n === 1 ? ' guest' : ' guests') : 'Remove selected';
+  }
+  function startPicking(){ picking = true; picked.clear(); rowState = null; $('sel-confirm').hidden = true; say('m-msg', ''); renderAdmin(); }
+  function stopPicking(){ if (removing) return; picking = false; picked.clear(); $('sel-confirm').hidden = true; renderAdmin(); }
+  $('sel-start').addEventListener('click', startPicking);
+  $('sel-close').addEventListener('click', stopPicking);
+  $('sel-all').addEventListener('click', function(){
+    var shown = all().filter(matches);
+    if ($('sel-all').dataset.mode === 'clear') picked.clear();
+    else shown.forEach(function(g){ picked.add(g.code); });
+    $('sel-confirm').hidden = true;
+    renderAdmin();
+  });
+  $('sel-remove').addEventListener('click', function(){
+    var chosen = Array.from(picked).map(function(c){ return guests.get(c); }).filter(Boolean);
+    if (!chosen.length) return;
+    var arrived = chosen.filter(function(g){ return g.checkedInAt; }).length, n = chosen.length;
+    $('sel-confirm-text').textContent = 'Remove ' + n + (n === 1 ? ' guest' : ' guests') + ' from the guest list? Their passes will stop working at the door.'
+      + (arrived ? ' ' + arrived + ' of them ' + (arrived === 1 ? 'has' : 'have') + ' already arrived.' : '');
+    $('sel-yes').textContent = 'Remove ' + n + (n === 1 ? ' guest' : ' guests');
+    $('sel-confirm').hidden = false;
+  });
+  $('sel-no').addEventListener('click', function(){ $('sel-confirm').hidden = true; });
+  $('sel-yes').addEventListener('click', async function(){
+    if (!db || removing) return;
+    var codes = Array.from(picked).filter(function(c){ return guests.has(c); });
+    if (!codes.length) { $('sel-confirm').hidden = true; return; }
+    removing = true; $('sel-yes').disabled = true; $('sel-no').disabled = true; renderAdmin();
+    var done = 0, failed = [];
+    // a few at a time, so a long selection does not flood a weak signal
+    for (var i = 0; i < codes.length; i += 10) {
+      await Promise.all(codes.slice(i, i + 10).map(function(c){
+        return db.collection('guests').doc(c).delete().then(function(){ done++; picked.delete(c); }, function(){ failed.push(c); });
+      }));
+      say('m-msg', 'Removing guests: ' + done + ' of ' + codes.length + '.');
+    }
+    removing = false; $('sel-yes').disabled = false; $('sel-no').disabled = false; $('sel-confirm').hidden = true;
+    if (failed.length) say('m-msg', 'Removed ' + done + (done === 1 ? ' guest' : ' guests') + '. ' + failed.length + ' could not be removed and ' + (failed.length === 1 ? 'is' : 'are') + ' still selected. Check the signal and try again.', 'bad');
+    else say('m-msg', 'Removed ' + done + (done === 1 ? ' guest' : ' guests') + '. Their passes no longer work.', 'good');
+    renderAdmin();
+  });
 
   $('q').addEventListener('input', function(e){ q = e.target.value; renderAdmin(); });
   ['f-all', 'f-in', 'f-out'].forEach(function(id){
@@ -1333,6 +1422,17 @@ dialog.pass::backdrop{background:var(--veil)}
     renderAdmin();
   });
   $('m-rows').addEventListener('click', async function(e){
+    if (picking) {
+      var row = e.target.closest ? e.target.closest('li') : null;
+      if (!row || !row.dataset.code || removing) return;
+      if (e.target.closest('.m-qr')) { var pg = guests.get(row.dataset.code); if (pg) openPass(pg); return; }
+      var c = row.dataset.code;
+      if (e.target.dataset && e.target.dataset.pick) { if (e.target.checked) picked.add(c); else picked.delete(c); }
+      else if (picked.has(c)) picked.delete(c); else picked.add(c);
+      $('sel-confirm').hidden = true;
+      renderAdmin();
+      return;
+    }
     var btn = e.target.closest ? e.target.closest('[data-act]') : null;
     if (!btn || !db) return;
     var li = btn.closest('li'), code = li && li.dataset.code, g = code && guests.get(code), act = btn.dataset.act;
@@ -1911,6 +2011,7 @@ dialog.pass::backdrop{background:var(--veil)}
   function leaveManager(){
     // going back to the door locks the manager and its settings again
     unlocked = false; rowState = null; closePass(); clearPins();
+    if (!removing) { picking = false; picked.clear(); $('sel-confirm').hidden = true; }
     if (!importing) { importOpen = false; resetImport(''); }
     setMode('door'); window.scrollTo(0, 0);
   }
