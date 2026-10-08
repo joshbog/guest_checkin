@@ -293,10 +293,11 @@ dialog.pass::backdrop{background:var(--veil)}
 .pass-in img{display:block;width:100%;height:auto;border:1px solid var(--line);background:var(--banner)}
 .pass-in .hint{color:var(--muted);font-size:.95rem}
 .ci-name{font:400 1.6rem/1.15 var(--display);overflow-wrap:anywhere;margin-top:-4px}
-/* a row with a Check in button: name over list on the left, the button on the right, the same on every row */
-.rows li.has-act{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:16px;row-gap:2px}
-.rows li.has-act .r-name,.rows li.has-act .r-meta{grid-column:1}
-.rows li.has-act .r-act{grid-column:2;grid-row:1 / span 2}
+/* a door row: the guest's name over their list on the left; who checked them in and when, or Check in, on the right */
+.rows li.door-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:16px}
+.r-main{display:grid;gap:2px;min-width:0}
+.r-list{font-size:.92rem;color:var(--muted)}
+.r-by{max-width:15rem;text-align:right;font-size:.92rem;line-height:1.35;color:var(--muted);font-variant-numeric:tabular-nums}
 .sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .sheet-head .eyebrow{min-width:0;overflow-wrap:anywhere}
 .icon-btn{flex:none;width:44px;height:44px;display:grid;place-items:center;padding:0;background:transparent;color:var(--accent);
@@ -1129,7 +1130,7 @@ dialog.pass::backdrop{background:var(--veil)}
   }   // lock = the saved passcode record, never the passcode itself
 
   function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
-  function clock(ms){ return new Date(ms).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}); }
+  function clock(ms){ return new Date(ms).toLocaleTimeString('en-GB', {hour: 'numeric', minute: '2-digit', hour12: true}).replace(/\s*([ap])\.?m\.?$/i, function(_, x){ return ' ' + x.toUpperCase() + 'M'; }); }   // 1:34 PM
   function ago(ms){
     var m = Math.round((Date.now() - ms) / 60000);
     if (m < 1) return 'moments ago';
@@ -1354,15 +1355,17 @@ dialog.pass::backdrop{background:var(--veil)}
     var elsewhere = want ? (view === 'in' ? waiting : inside).filter(named).length : 0;
     rows.textContent = '';
     shown.forEach(function(g){
-      var li = el('li');
-      li.appendChild(el('span', 'r-name', g.name));
-      var meta = el('span', 'r-meta');
-      meta.appendChild(el('span', '', g.checkedInAt ? g.list + ' · ' + clock(g.checkedInAt) + (byName(g) ? ' · ' + byName(g) : '') : g.list));
-      if (!g.checkedInAt && ciLock && canWrite && db) {
+      // the guest on the left (name, then their list); on the right who checked them in and when, or Check in
+      var li = el('li', 'door-row'), main = el('span', 'r-main');
+      main.appendChild(el('span', 'r-name', g.name));
+      main.appendChild(el('span', 'r-list', g.list));
+      li.appendChild(main);
+      if (g.checkedInAt) li.appendChild(el('span', 'r-by', (byName(g) ? 'Checked by ' + byName(g) : 'Checked in') + ' · ' + clock(g.checkedInAt)));
+      else if (ciLock && canWrite && db) {
         var go = el('button', 'btn ghost small r-act', 'Check in'); go.type = 'button'; go.dataset.code = g.code;
         go.setAttribute('aria-label', 'Check in ' + g.name);
-        li.className = 'has-act'; li.appendChild(meta); li.appendChild(go);
-      } else li.appendChild(meta);
+        li.appendChild(go);
+      }
       rows.appendChild(li);
     });
     $('begin').hidden = !(loaded && !noData && !list.length && isOwner);
