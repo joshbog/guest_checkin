@@ -218,6 +218,11 @@ button,input,select{font:inherit;color:inherit}
 .add-choice span{font-size:.92rem;color:var(--muted)}
 .add-choice:hover,.add-choice:focus-visible{background:var(--tab-on);outline:none}
 .tools{display:grid;gap:12px}
+.find-row{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:8px}   /* search, then the guest type */
+@media (max-width:560px){.tools .find-row{grid-template-columns:1fr}}   /* the longer guest-list search keeps its whole line on a phone */
+.find-row select{width:100%;min-width:0}
+.types li{align-items:center}
+.types .s-meta{align-items:baseline}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{padding:12px 12px;border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:0;cursor:pointer;
   font:500 .72rem/1 var(--body);letter-spacing:.14em;text-transform:uppercase}
@@ -440,8 +445,12 @@ dialog.pass::backdrop{background:var(--veil)}
         <button type="button" id="tab-in" role="tab" aria-selected="true" aria-controls="rows">Arrived<b id="n-in">0</b></button>
         <button type="button" id="tab-out" role="tab" aria-selected="false" aria-controls="rows">Still to come<b id="n-out">0</b></button>
       </div>
-      <label class="sr" for="find">Search guests by name</label>
-      <input class="text-in" id="find" type="search" placeholder="Search by name" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+      <div class="find-row">
+        <label class="sr" for="find">Search guests by name</label>
+        <input class="text-in" id="find" type="search" placeholder="Search by name" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+        <label class="sr" for="find-type">Show guest type</label>
+        <select class="text-in" id="find-type" data-types="filter"><option value="">All types</option></select>
+      </div>
     </div>
     <ol class="rows" id="rows"></ol>
     <p class="empty" id="empty">Guests appear here as they are checked in.</p>
@@ -480,7 +489,7 @@ dialog.pass::backdrop{background:var(--veil)}
         </div>
         <div class="field">
           <label class="sr" for="add-list">Whose guest</label>
-          <select class="text-in" id="add-list"><option>Groom's guest</option><option>Bride's guest</option><option>Vendor</option></select>
+          <select class="text-in" id="add-list" data-types="pick"><option>Groom's guest</option><option>Bride's guest</option><option>Vendor</option></select>
         </div>
       </div>
       <div class="row">
@@ -508,7 +517,7 @@ dialog.pass::backdrop{background:var(--veil)}
       <ul class="import-notes" id="import-notes"></ul>
       <div class="field" id="import-default-field" hidden>
         <label class="label" for="import-default">Guests with no list go to</label>
-        <select class="text-in" id="import-default"><option>Groom's guest</option><option>Bride's guest</option><option>Vendor</option></select>
+        <select class="text-in" id="import-default" data-types="pick"><option>Groom's guest</option><option>Bride's guest</option><option>Vendor</option></select>
       </div>
       <div class="row">
         <button class="btn" type="button" id="import-go">Add guests</button>
@@ -519,8 +528,12 @@ dialog.pass::backdrop{background:var(--veil)}
   </section>
 
   <section class="tools" id="tools">
-    <label class="sr" for="q">Find a guest</label>
-    <input class="text-in" id="q" type="search" placeholder="Find a guest by name or entry code" autocomplete="off" autocorrect="off" spellcheck="false">
+    <div class="find-row">
+      <label class="sr" for="q">Find a guest</label>
+      <input class="text-in" id="q" type="search" placeholder="Find a guest by name or entry code" autocomplete="off" autocorrect="off" spellcheck="false">
+      <label class="sr" for="q-type">Show guest type</label>
+      <select class="text-in" id="q-type" data-types="filter"><option value="">All types</option></select>
+    </div>
     <div class="chips" role="group" aria-label="Show">
       <button type="button" class="chip" id="f-all" data-f="all" aria-pressed="true">All<b id="c-all">0</b></button>
       <button type="button" class="chip" id="f-in" data-f="in" aria-pressed="false">Arrived<b id="c-in">0</b></button>
@@ -560,6 +573,7 @@ dialog.pass::backdrop{background:var(--veil)}
         <button type="button" role="tab" id="tab-people" data-tab="people" aria-controls="staff-box" aria-selected="false" tabindex="-1">People</button>
         <button type="button" role="tab" id="tab-passcode" data-tab="passcode" aria-controls="lock-box" aria-selected="false" tabindex="-1">Passcode</button>
         <button type="button" role="tab" id="tab-checkin" data-tab="checkin" aria-controls="ci-box" aria-selected="false" tabindex="-1">Check-in code</button>
+        <button type="button" role="tab" id="tab-types" data-tab="types" aria-controls="types-box" aria-selected="false" tabindex="-1">Guest types</button>
         <button type="button" role="tab" id="tab-list" data-tab="list" aria-controls="list-box" aria-selected="false" tabindex="-1">Guest list</button>
       </div>
     </div>
@@ -708,6 +722,25 @@ dialog.pass::backdrop{background:var(--veil)}
     <p class="msg" id="ci-msg" role="status"></p>
   </section>
 
+  <section class="s-panel" id="types-box" role="tabpanel" aria-labelledby="tab-types" hidden>
+    <header class="s-head">
+      <h2>Guest types</h2>
+      <p>Every guest belongs to one type. Pick it when you add a guest, and use it to filter the list at the door and in Manage guests.</p>
+    </header>
+    <ul class="staff types" id="type-rows"></ul>
+    <form class="event-form s-card" id="type-form" novalidate>
+      <h3 class="s-sub">Add a guest type</h3>
+      <div class="row">
+        <div class="field grow">
+          <label class="label" for="type-name">Name</label>
+          <input class="text-in" id="type-name" type="text" maxlength="30" autocomplete="off" placeholder="For example Family">
+        </div>
+      </div>
+      <button class="btn" type="submit" id="type-go">Add type</button>
+    </form>
+    <p class="msg" id="type-msg" role="status"></p>
+  </section>
+
   <section class="s-panel" id="list-box" role="tabpanel" aria-labelledby="tab-list" hidden>
     <header class="s-head">
       <h2>Guest list</h2>
@@ -809,7 +842,9 @@ dialog.pass::backdrop{background:var(--veil)}
   var $ = function(id){ return document.getElementById(id); };
   var HOLDER = 'door-' + Math.random().toString(36).slice(2, 10);
   var ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';   // no 0, O, 1 or I, so codes are easy to read aloud and type
-  var LISTS = ["Groom's guest", "Bride's guest", "Vendor"];
+  var DEFAULT_LISTS = ["Groom's guest", "Bride's guest", "Vendor"];
+  var LISTS = DEFAULT_LISTS.slice();   // the guest types, set in Settings (settings/lists)
+  var findType = '', qType = '', typeEdit = null, typeBusy = false;
   var guests = new Map();          // entry code -> guest record, kept live from the shared guest list
   var loaded = false, db = null, saver = null, busy = false, isOwner = false, canWrite = true;
   var mode = 'door', view = 'in', find = '', resetting = false;
@@ -942,6 +977,128 @@ dialog.pass::backdrop{background:var(--veil)}
 
   /* ---------- people who can sign in: organisers and door helpers ---------- */
   var staffEdit = '';   // the person whose name is being changed
+  /* ================= guest types (Settings) ================= */
+  function cleanTypes(d){
+    var seen = {}, out = [];
+    (d && Array.isArray(d.types) ? d.types : []).forEach(function(v){
+      var s = typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, 30) : '';
+      if (s && !seen[s.toLowerCase()] && out.length < 12) { seen[s.toLowerCase()] = 1; out.push(s); }
+    });
+    return out.length ? out : DEFAULT_LISTS.slice();
+  }
+  function typeCount(t){ var n = 0; guests.forEach(function(g){ if (g.list === t) n++; }); return n; }
+  // every select of guest types: the pickers offer the types; the filters also offer any type a guest still has
+  function fillTypes(){
+    var used = [];
+    guests.forEach(function(g){ if (g.list && LISTS.indexOf(g.list) < 0 && used.indexOf(g.list) < 0) used.push(g.list); });
+    used.sort();
+    document.querySelectorAll('select[data-types]').forEach(function(sel){
+      var filter = sel.dataset.types === 'filter', keep = sel.value, opts = filter ? LISTS.concat(used) : LISTS;
+      var now = Array.from(sel.options).map(function(o){ return o.value; }).join('|'), want = (filter ? [''] : []).concat(opts).join('|');
+      if (now === want) return;
+      sel.textContent = '';
+      if (filter) sel.appendChild(new Option('All types', ''));
+      opts.forEach(function(l){ sel.appendChild(new Option(l, l)); });
+      sel.value = want.split('|').indexOf(keep) >= 0 ? keep : (filter ? '' : LISTS[0]);
+    });
+    if (findType && $('find-type').value !== findType) findType = $('find-type').value;
+    if (qType && $('q-type').value !== qType) qType = $('q-type').value;
+  }
+  function renderTypes(){
+    // a refresh while a new name is being typed keeps what was typed
+    var was = $('type-rename'), typed = was && was.dataset.for === typeEdit ? was.value : null, focused = was && document.activeElement === was;
+    var rows = $('type-rows'); rows.textContent = '';
+    if (typeEdit !== null && LISTS.indexOf(typeEdit) < 0) typeEdit = null;
+    LISTS.forEach(function(t){
+      var n = typeCount(t), li = el('li'); li.dataset.type = t;
+      var who = el('span', 's-who');
+      who.appendChild(el('span', 's-name', t));
+      li.appendChild(who);
+      var meta = el('span', 's-meta');
+      meta.appendChild(el('span', '', n + (n === 1 ? ' guest' : ' guests')));
+      var rn = el('button', 'link', 'Rename'); rn.type = 'button'; rn.dataset.act = 'type-rename'; rn.disabled = typeBusy; meta.appendChild(rn);
+      if (!n && LISTS.length > 1) { var b = el('button', 'link danger', 'Remove'); b.type = 'button'; b.dataset.act = 'type-remove'; b.disabled = typeBusy; meta.appendChild(b); }
+      li.appendChild(meta);
+      if (typeEdit === t) {
+        var f = el('form', 'm-form s-rename'); f.noValidate = true;
+        var lab = el('label', 'label', 'New name'); lab.htmlFor = 'type-rename';
+        var inp = el('input', 'text-in'); inp.id = 'type-rename'; inp.type = 'text'; inp.maxLength = 30; inp.autocomplete = 'off'; inp.dataset.for = t; inp.value = typed !== null ? typed : t;
+        var r = el('div', 'row');
+        var save = el('button', 'btn small', 'Save'); save.type = 'submit'; save.disabled = typeBusy;
+        var cancel = el('button', 'btn ghost small', 'Cancel'); cancel.type = 'button'; cancel.dataset.act = 'type-rename-cancel';
+        r.appendChild(save); r.appendChild(cancel);
+        f.appendChild(lab); f.appendChild(inp);
+        if (n) f.appendChild(el('p', 'ls-note', 'The ' + n + (n === 1 ? ' guest' : ' guests') + ' under ' + t + ' move to the new name.'));
+        f.appendChild(r); li.appendChild(f);
+      }
+      rows.appendChild(li);
+    });
+    $('type-go').disabled = typeBusy || LISTS.length >= 12;
+    if (focused && $('type-rename')) $('type-rename').focus();
+  }
+  function typeTaken(name, except){ return LISTS.some(function(l){ return l !== except && l.toLowerCase() === name.toLowerCase(); }); }
+  function saveTypes(next){ return db.doc('settings/lists').set({types: next}); }
+  $('type-form').addEventListener('submit', async function(e){
+    e.preventDefault();
+    if (!db || !isOwner || typeBusy) return;
+    var name = $('type-name').value.replace(/\s+/g, ' ').trim().slice(0, 30);
+    if (!name) { say('type-msg', 'Type a name for the new guest type.', 'bad'); $('type-name').focus(); return; }
+    if (typeTaken(name)) { say('type-msg', 'There is already a guest type called ' + name + '.', 'bad'); return; }
+    if (LISTS.length >= 12) { say('type-msg', 'There can be up to 12 guest types.', 'bad'); return; }
+    typeBusy = true; renderTypes();
+    try { await saveTypes(LISTS.concat([name])); $('type-name').value = ''; say('type-msg', name + ' was added. You can now pick it when you add a guest.', 'good'); }
+    catch (err) { say('type-msg', 'Could not add that guest type. Check the signal and try again.', 'bad'); }
+    typeBusy = false; renderTypes();
+  });
+  $('type-rows').addEventListener('click', async function(e){
+    var act = e.target.closest ? e.target.closest('[data-act]') : null;
+    if (!act || !isOwner || typeBusy) return;
+    var t = act.closest('li').dataset.type;
+    if (act.dataset.act === 'type-rename' || act.dataset.act === 'type-rename-cancel') {
+      typeEdit = act.dataset.act === 'type-rename' ? t : null; renderTypes();
+      if (typeEdit !== null && $('type-rename')) { $('type-rename').focus(); $('type-rename').select(); }
+      return;
+    }
+    if (act.dataset.act !== 'type-remove' || !db) return;
+    if (typeCount(t)) { say('type-msg', 'Move the guests under ' + t + ' to another type first.', 'bad'); return; }
+    if (LISTS.length < 2) return;
+    if (!armed(act, 'Remove')) return;
+    typeBusy = true; renderTypes();
+    try { await saveTypes(LISTS.filter(function(l){ return l !== t; })); say('type-msg', t + ' was removed.', 'good'); }
+    catch (err) { say('type-msg', 'Could not remove that guest type. Try again.', 'bad'); }
+    typeBusy = false; renderTypes();
+  });
+  $('type-rows').addEventListener('submit', async function(e){
+    e.preventDefault();
+    if (!db || !isOwner || typeBusy || typeEdit === null) return;
+    var from = typeEdit, to = $('type-rename').value.replace(/\s+/g, ' ').trim().slice(0, 30);
+    if (!to) { say('type-msg', 'Type a name.', 'bad'); return; }
+    if (to === from) { typeEdit = null; renderTypes(); return; }
+    if (typeTaken(to, from)) { say('type-msg', 'There is already a guest type called ' + to + '.', 'bad'); return; }
+    typeBusy = true; renderTypes();
+    // the guests move first, a few at a time; the type itself is renamed once they all have
+    var codes = []; guests.forEach(function(g){ if (g.list === from) codes.push(g.code); });
+    var done = 0, failed = 0;
+    for (var i = 0; i < codes.length; i += 10) {
+      await Promise.all(codes.slice(i, i + 10).map(function(c){
+        return db.collection('guests').doc(c).update({list: to}).then(function(){ done++; }, function(){ failed++; });
+      }));
+      if (codes.length > 10) say('type-msg', 'Moving guests to ' + to + ': ' + done + ' of ' + codes.length + '.');
+    }
+    if (failed) {
+      say('type-msg', failed + (failed === 1 ? ' guest' : ' guests') + ' could not be moved, so ' + from + ' keeps its name for now. Check the signal and save again.', 'bad');
+    } else {
+      try {
+        await saveTypes(LISTS.map(function(l){ return l === from ? to : l; }));
+        if (findType === from) findType = to;
+        if (qType === from) qType = to;
+        typeEdit = null;
+        say('type-msg', from + ' is now ' + to + (codes.length ? ', with its ' + codes.length + (codes.length === 1 ? ' guest.' : ' guests.') : '.'), 'good');
+      } catch (err) { say('type-msg', 'Could not rename that guest type. Check the signal and try again.', 'bad'); }
+    }
+    typeBusy = false; renderTypes();
+  });
+
   function renderStaff(){
     var rows = $('staff-rows'); rows.textContent = '';
     if (staffEdit && !staff.some(function(s){ return s.email === staffEdit; })) staffEdit = '';
@@ -1345,7 +1502,7 @@ dialog.pass::backdrop{background:var(--veil)}
 
   /* ================= the door: ledger ================= */
   function renderDoor(){
-    var list = all();
+    var everyone = all(), list = findType ? everyone.filter(function(g){ return g.list === findType; }) : everyone;   // the tabs count the type shown
     var inside = list.filter(function(g){ return g.checkedInAt; }).sort(function(a, b){ return b.checkedInAt - a.checkedInAt; });
     var waiting = list.filter(function(g){ return !g.checkedInAt; }).sort(function(a, b){ return a.no - b.no; });
     $('n-in').textContent = inside.length; $('n-out').textContent = waiting.length;
@@ -1373,17 +1530,20 @@ dialog.pass::backdrop{background:var(--veil)}
       }
       rows.appendChild(li);
     });
-    $('begin').hidden = !(loaded && !noData && !list.length && isOwner);
+    $('begin').hidden = !(loaded && !noData && !everyone.length && isOwner);
     var empty = $('empty');
     empty.hidden = shown.length > 0;
     empty.textContent = !loaded ? 'Opening the guest list.'
       : noData ? 'Arrivals show here once an organiser has invited this account.'
-      : !list.length ? 'No guests on the list yet.'
+      : !everyone.length ? 'No guests on the list yet.'
+      : !list.length ? 'No one on the list is under ' + findType + '.'
       : want ? 'No guest with that name ' + (view === 'in' ? 'has arrived.' : 'is still to come.')
           + (elsewhere ? ' ' + elsewhere + (elsewhere === 1 ? ' match' : ' matches') + ' under ' + (view === 'in' ? 'Still to come.' : 'Arrived.') : '')
+      : findType ? (view === 'in' ? 'No one under ' + findType + ' has arrived yet.' : 'Everyone under ' + findType + ' has arrived.')
       : view === 'in' ? 'Guests appear here as they are checked in.' : 'Everyone on the list has arrived.';
   }
   $('find').addEventListener('input', function(e){ find = e.target.value; renderDoor(); });
+  $('find-type').addEventListener('change', function(e){ findType = e.target.value; renderDoor(); });
   function setView(v){
     view = v;
     $('tab-in').setAttribute('aria-selected', String(v === 'in'));
@@ -1403,6 +1563,7 @@ dialog.pass::backdrop{background:var(--veil)}
 
   /* ================= the guest list manager ================= */
   function matches(g){
+    if (qType && g.list !== qType) return false;
     if (filt === 'in' && !g.checkedInAt) return false;
     if (filt === 'out' && g.checkedInAt) return false;
     var s = q.trim().toLowerCase();
@@ -1432,7 +1593,8 @@ dialog.pass::backdrop{background:var(--veil)}
   }
   function listPicker(id, value){
     var sel = el('select', 'text-in'); sel.id = id;
-    LISTS.forEach(function(l){ var o = el('option', '', l); o.selected = l === value; sel.appendChild(o); });
+    var opts = LISTS.indexOf(value) < 0 && value ? LISTS.concat([value]) : LISTS;   // a guest keeps a type that has since been removed
+    opts.forEach(function(l){ var o = el('option', '', l); o.selected = l === value; sel.appendChild(o); });
     return sel;
   }
   function actBtn(label, act, danger){
@@ -1440,8 +1602,9 @@ dialog.pass::backdrop{background:var(--veil)}
   }
   function renderAdmin(){
     var list = all().sort(function(a, b){ return a.no - b.no; });
-    var nIn = list.filter(function(g){ return g.checkedInAt; }).length;
-    $('c-all').textContent = list.length; $('c-in').textContent = nIn; $('c-out').textContent = list.length - nIn;
+    var ofType = qType ? list.filter(function(g){ return g.list === qType; }) : list;   // the counts follow the type shown
+    var nIn = ofType.filter(function(g){ return g.checkedInAt; }).length;
+    $('c-all').textContent = ofType.length; $('c-in').textContent = nIn; $('c-out').textContent = ofType.length - nIn;
     if (rowState && !guests.has(rowState.code)) rowState = null;
 
     // keep the cursor where it was if the list refreshes while a name is being edited
@@ -1524,6 +1687,7 @@ dialog.pass::backdrop{background:var(--veil)}
     empty.hidden = shown.length > 0 || none;
     empty.textContent = !loaded ? 'Opening the guest list.'
       : !list.length ? 'The guest list is empty.'
+      : qType && !ofType.length ? 'No one on the list is under ' + qType + '.'
       : 'No guest matches that search.';
   }
 
@@ -1582,6 +1746,7 @@ dialog.pass::backdrop{background:var(--veil)}
   });
 
   $('q').addEventListener('input', function(e){ q = e.target.value; renderAdmin(); });
+  $('q-type').addEventListener('change', function(e){ qType = e.target.value; renderAdmin(); });
   ['f-all', 'f-in', 'f-out'].forEach(function(id){
     $(id).addEventListener('click', function(){
       filt = $(id).dataset.f;
@@ -1598,7 +1763,7 @@ dialog.pass::backdrop{background:var(--veil)}
   $('m-rows').addEventListener('submit', async function(e){
     e.preventDefault();
     if (!rowState || rowState.mode !== 'edit' || !db) return;
-    var code = rowState.code, name = tidy(rowState.name), list = LISTS.indexOf(rowState.list) >= 0 ? rowState.list : LISTS[0];
+    var code = rowState.code, name = tidy(rowState.name), list = LISTS.indexOf(rowState.list) >= 0 || (guests.get(rowState.code) || {}).list === rowState.list ? rowState.list : LISTS[0];
     if (!name) { say('m-msg', 'A guest needs a name.', 'bad'); return; }
     var before = guests.get(code);
     try {
@@ -1780,7 +1945,17 @@ dialog.pass::backdrop{background:var(--veil)}
     });
   }
   function isName(c){ return typeof c === 'string' && /[A-Za-zÀ-ɏḀ-ỿ]/.test(c); }
-  function sideOf(text){ var s = String(text == null ? '' : text).toLowerCase(); return /groom/.test(s) ? LISTS[0] : /bride/.test(s) ? LISTS[1] : /vendor/.test(s) ? LISTS[2] : null; }
+  // which guest type a spreadsheet cell means: the type's own name, or its key word ("groom", "vendor", "family")
+  function typeKey(t){
+    var w = String(t).toLowerCase().replace(/[\u2019']s\b/g, '').replace(/\b(guests?|of|the|and|for|side)\b/g, ' ').match(/[a-z\u00c0-\u024f]{3,}/);
+    return w ? w[0].replace(/s$/, '') : '';
+  }
+  function sideOf(text){
+    var s = String(text == null ? '' : text).trim().toLowerCase(); if (!s) return null;
+    for (var i = 0; i < LISTS.length; i++) if (LISTS[i].toLowerCase() === s) return LISTS[i];
+    for (var j = 0; j < LISTS.length; j++) { var k = typeKey(LISTS[j]); if (k && s.indexOf(k) >= 0) return LISTS[j]; }
+    return null;
+  }
   function readPeople(rows){
     // what a heading cell is for; long cells are sentences, not headings
     function kind(c){
@@ -1789,8 +1964,9 @@ dialog.pass::backdrop{background:var(--veil)}
       if (!h || h.length > 30) return '';
       if (/^(entry )?code$/.test(h)) return 'code';
       if (/phone|number|tel|mobile|email|table|seat|file|sent|note|arrived|whatsapp|^no\.?$/.test(h)) return '';
-      if (/^(list|side|whose guest|group|category|family)$/.test(h)) return 'list';
-      if (/groom|bride|vendor/.test(h)) return 'side';
+      if (/^(list|side|whose guest|group|category|type|guest type)$/.test(h)) return 'list';
+      if (sideOf(h)) return 'side';
+      if (h === 'family') return 'list';
       if (/^(guest|guests|guest name|guest names|name|names|full name)$/.test(h)) return 'name';
       return '';
     }
@@ -2121,7 +2297,7 @@ dialog.pass::backdrop{background:var(--veil)}
   });
 
   /* ================= switching between the door and the guest list ================= */
-  function render(){ renderTally(); if (mode === 'admin') renderAdmin(); else if (mode === 'door') renderDoor(); }
+  function render(){ fillTypes(); renderTally(); if (mode === 'admin') renderAdmin(); else if (mode === 'door') renderDoor(); else if (mode === 'settings' && sTab === 'types') renderTypes(); }
   function setMode(m){
     mode = (m === 'admin' || m === 'settings') && unlocked ? m : 'door';
     if (mode !== 'door') stopCamera();
@@ -2219,7 +2395,7 @@ dialog.pass::backdrop{background:var(--veil)}
   }
   /* ================= settings: its own page, one tab per section ================= */
   var TABS = {event: ['event-box', 'Event details'], theme: ['theme-box', 'Colours'], people: ['staff-box', 'People'],
-              passcode: ['lock-box', 'Passcode'], checkin: ['ci-box', 'Check-in code'], list: ['list-box', 'Guest list']};
+              passcode: ['lock-box', 'Passcode'], checkin: ['ci-box', 'Check-in code'], types: ['types-box', 'Guest types'], list: ['list-box', 'Guest list']};
   function showTab(name){
     if (!TABS[name]) name = 'event';
     sTab = name;
@@ -2236,11 +2412,12 @@ dialog.pass::backdrop{background:var(--veil)}
     var top = $('settings').getBoundingClientRect().top + window.scrollY;
     if (window.scrollY > top) window.scrollTo(0, top);
     if (preview) paintSample();
+    if (name === 'types') renderTypes();
   }
   // openSettings() opens the first tab, openSettings('people') a named one, openSettings(true) the passcode box
   function openSettings(where){
     if (!unlocked) return;
-    renderLock(); renderCi(); resetStep(false); fillEventForm(); renderSwatches(); renderStaff();
+    renderLock(); renderCi(); resetStep(false); fillEventForm(); renderSwatches(); renderStaff(); renderTypes();
     ['lock-msg', 'ci-msg', 'reset-msg', 'event-msg', 'theme-msg', 'staff-msg'].forEach(function(id){ say(id, ''); });
     var tab = where === true ? 'passcode' : (typeof where === 'string' && TABS[where] ? where : 'event');
     sTab = tab; setMode('settings'); showTab(tab);
@@ -2461,6 +2638,10 @@ dialog.pass::backdrop{background:var(--veil)}
     db.doc('settings/checkin').onSnapshot(function(snap){
       useCiLock(snap.exists ? snap.data() : null);
       renderDoor(); if (mode === 'settings') renderCi();
+    }, function(){});
+    db.doc('settings/lists').onSnapshot(function(snap){
+      LISTS = cleanTypes(snap.exists ? snap.data() : null);
+      fillTypes(); render(); if (mode === 'settings') renderTypes();
     }, function(){});
     renderSwatches();
     db.doc('settings/event').onSnapshot(function(snap){
