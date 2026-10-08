@@ -167,24 +167,55 @@ button,input,select{font:inherit;color:inherit}
 .m-acts{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:2px 20px}
 .m-form{grid-column:1 / -1;display:grid;gap:10px;padding:14px;border:1px solid var(--line);background:var(--banner)}
 .m-form p{color:var(--ink)}
-.whole{display:grid;gap:12px;justify-items:start}
-.whole + .whole{padding-top:18px;border-top:1px solid var(--line)}
-.nudge{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px}
-.nudge p{flex:1 1 14rem;min-width:0}
-.import{display:grid;gap:14px;padding:clamp(16px,4vw,26px)}
-.import h2{font:400 clamp(1.5rem,5.4vw,2rem)/1.12 var(--display);text-wrap:balance}
-.import .hint{color:var(--muted);max-width:36rem}
-.import-preview{display:grid;gap:12px;padding-top:14px;border-top:1px solid var(--line)}
-.import-count{font:400 1.25rem/1.3 var(--display)}
-.import-notes{display:grid;gap:6px;color:var(--muted)}
-.import-notes li{padding-left:1em;text-indent:-1em}
-.import-notes li::before{content:"· "}
-.whole p{max-width:36rem}
-.whole .hint{color:var(--muted)}
+/* ---------- settings: a page with breadcrumbs and a sticky tab bar ---------- */
+.s-wrap{max-width:1040px}
+.on-settings .mast .wrap,.on-settings .carpet .wrap{max-width:1040px}   /* the header lines up with the wider settings page */
+.s-bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;background:var(--paper);border-bottom:1px solid var(--line)}
+.s-bar .s-wrap{display:grid;gap:4px;padding-top:12px}
+.crumbs{display:flex;flex-wrap:wrap;align-items:baseline;font-size:.92rem;line-height:1.4;color:var(--muted)}
+.crumbs li{display:flex;align-items:baseline;min-width:0}
+.crumbs li + li::before{content:"/";margin-inline:.55em;opacity:.5}
+.crumb{background:none;border:0;border-radius:0;padding:3px 0;font:inherit;color:var(--accent);cursor:pointer;
+  text-decoration:underline;text-decoration-color:transparent;text-underline-offset:3px}
+.crumb:hover{text-decoration-color:currentColor}
+.crumbs [aria-current]{color:var(--ink)}
+.s-tabs{display:flex;gap:clamp(20px,3.6vw,36px);overflow-x:auto;scrollbar-width:none;
+  margin-inline:calc(var(--gutter) * -1);padding-inline:var(--gutter)}
+.s-tabs::-webkit-scrollbar{display:none}
+.s-tabs button{flex:none;padding:12px 0 11px;background:none;border:0;border-bottom:2px solid transparent;border-radius:0;cursor:pointer;
+  font:500 1rem/1.2 var(--body);color:var(--muted);white-space:nowrap}
+.s-tabs button:hover{color:var(--ink)}
+.s-tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.s-tabs button:focus-visible{outline-offset:-2px}
+.s-main{padding-block:clamp(26px,5vw,48px) clamp(56px,10vw,96px)}
+.s-cols{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(32px,6vw,64px);align-items:start}
+.s-panels{min-width:0}
+.s-panel{display:grid;gap:clamp(18px,3vw,26px);max-width:38rem;min-width:0;justify-items:start}
+.s-panel > *{min-width:0;max-width:100%}
+.s-panel > form,.s-panel > ul,.s-panel > .swatches,.s-panel > .s-actions,.s-panel > .m-form{width:100%}
+.s-head{display:grid;gap:10px}
+.s-head h2{font:400 clamp(1.9rem,6vw,2.5rem)/1.08 var(--display);text-wrap:balance}
+.s-head p{color:var(--muted);max-width:34rem}
+.s-sub{margin:0;font:400 1.3rem/1.2 var(--display)}
+/* form labels in settings are plain sentences; the small capitals stay for the event's own name */
+.s-panel .label{font:500 .95rem/1.3 var(--body);letter-spacing:0;text-transform:none;color:var(--ink)}
+.s-card{padding:clamp(16px,3vw,22px);border:1px solid var(--line);background:var(--banner)}
+.s-card .grow{flex:1 1 14rem}   /* address and role sit side by side only where there is room for both */
+.s-actions{display:grid;border-bottom:1px solid var(--line)}
+.s-action{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 28px;padding-block:20px;border-top:1px solid var(--line)}
+.s-action > div{flex:1 1 15rem;min-width:0;display:grid;gap:5px}
+.s-action p{color:var(--muted)}
+.s-preview{display:grid;gap:12px;justify-items:start;min-width:0}
+.s-cap{font:400 1.3rem/1.2 var(--display)}
+.s-preview img{display:block;width:100%;max-width:300px;height:auto;aspect-ratio:1181 / 1772;background:var(--banner);border:1px solid var(--line);box-shadow:0 26px 44px -30px var(--shadow)}
+.s-preview .hint{color:var(--muted);font-size:.92rem}
+@media (min-width:900px){
+  .s-cols.with-preview{grid-template-columns:minmax(0,1fr) 300px}
+  .s-preview{position:sticky;top:calc(env(safe-area-inset-top,0px) + 124px)}
+}
 
 /* ---------- pass preview ---------- */
 dialog.pass{border:1px solid var(--accent);border-radius:0;padding:0;background:var(--paper);color:var(--ink);width:min(92vw,400px);max-height:94dvh;overflow:auto}
-dialog.pass.wide{width:min(94vw,520px)}
 dialog.pass::backdrop{background:var(--veil)}
 .pass-in{display:grid;gap:12px;padding:16px}
 .pass-in img{display:block;width:100%;height:auto;border:1px solid var(--line);background:var(--banner)}
@@ -199,11 +230,17 @@ dialog.pass::backdrop{background:var(--veil)}
 .event-form .field,.event-form .row{width:100%}
 .event-form .row{align-items:end}
 .event-form .grow{flex:1 1 9.5rem}
-.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(11rem,1fr));gap:8px;width:100%}
-.swatch{display:flex;align-items:center;gap:10px;min-width:0;padding:9px 11px;border:1px solid var(--line);border-radius:0;background:var(--banner);color:var(--ink);
-  cursor:pointer;text-align:left;font:400 .98rem/1.2 var(--body)}
-.swatch i{flex:none;display:block;width:32px;height:32px;border:1px solid var(--line)}
-.swatch[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.4rem,1fr));gap:12px;width:100%}
+/* each theme is shown as a small pass: the paper, the initials in the accent, the strip along the bottom */
+.swatch{display:grid;min-width:0;padding:0;border:1px solid var(--line);border-radius:0;background:var(--banner);color:var(--ink);
+  cursor:pointer;text-align:left;font:400 .95rem/1.25 var(--body);overflow:hidden}
+.sw-art{display:grid;grid-template-rows:minmax(0,1fr) 18px;height:104px}
+.sw-art b{display:grid;place-items:center;font:400 1.9rem/1 var(--display);letter-spacing:.04em}
+.sw-art i{display:block}
+.sw-name{display:grid;gap:3px;padding:10px 12px 12px}
+.sw-name small{font:500 .78rem/1.2 var(--body);color:var(--accent);visibility:hidden}
+.swatch[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.swatch[aria-pressed="true"] .sw-name small{visibility:visible}
 .swatch:disabled{cursor:default;opacity:.75}
 .lock-form{display:grid;gap:12px;justify-items:start}
 .lock-form .field{flex:0 1 13rem}
@@ -377,15 +414,37 @@ dialog.pass::backdrop{background:var(--veil)}
   </section>
 </main>
 
-<dialog class="pass wide" id="settings" aria-labelledby="settings-title">
-  <div class="pass-in">
-    <div class="sheet-head">
-      <p class="eyebrow" id="settings-title">Settings</p>
-      <button class="icon-btn" type="button" id="settings-close" aria-label="Close settings"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false"><path d="M4 4 16 16M16 4 4 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></button>
+<!-- ================= settings: a page of its own (organisers only) ================= -->
+<div id="settings" hidden>
+  <div class="s-bar" id="s-bar">
+    <div class="wrap s-wrap">
+      <nav aria-label="Breadcrumb">
+        <ol class="crumbs">
+          <li><button class="crumb" type="button" id="crumb-door">Door check-in</button></li>
+          <li><button class="crumb" type="button" id="settings-close">Manage guests</button></li>
+          <li><button class="crumb" type="button" id="crumb-settings">Settings</button></li>
+          <li aria-current="page" id="crumb-here">Event details</li>
+        </ol>
+      </nav>
+      <div class="s-tabs" role="tablist" aria-label="Settings sections">
+        <button type="button" role="tab" id="tab-event" data-tab="event" aria-controls="event-box" aria-selected="true">Event details</button>
+        <button type="button" role="tab" id="tab-theme" data-tab="theme" aria-controls="theme-box" aria-selected="false" tabindex="-1">Colours</button>
+        <button type="button" role="tab" id="tab-people" data-tab="people" aria-controls="staff-box" aria-selected="false" tabindex="-1">People</button>
+        <button type="button" role="tab" id="tab-passcode" data-tab="passcode" aria-controls="lock-box" aria-selected="false" tabindex="-1">Passcode</button>
+        <button type="button" role="tab" id="tab-list" data-tab="list" aria-controls="list-box" aria-selected="false" tabindex="-1">Guest list</button>
+      </div>
     </div>
-  <section class="whole" id="event-box">
-    <p class="label">Event details</p>
-    <p class="hint" id="event-state">These show at the top of this page and on every pass.</p>
+  </div>
+
+  <main class="wrap s-wrap s-main">
+    <div class="s-cols with-preview" id="s-cols">
+      <div class="s-panels">
+
+  <section class="s-panel" id="event-box" role="tabpanel" aria-labelledby="tab-event">
+    <header class="s-head">
+      <h2>Event details</h2>
+      <p id="event-state">These show at the top of every page and on every pass.</p>
+    </header>
     <form class="event-form" id="event-form" novalidate>
       <div class="field">
         <label class="label" for="ev-type">Event</label>
@@ -420,24 +479,30 @@ dialog.pass::backdrop{background:var(--veil)}
     <p class="msg" id="event-msg" role="status"></p>
   </section>
 
-  <section class="whole" id="theme-box">
-    <p class="label">Colour theme</p>
+  <section class="s-panel" id="theme-box" role="tabpanel" aria-labelledby="tab-theme" hidden>
+    <header class="s-head">
+      <h2>Colours</h2>
+      <p>One theme colours every page of this site and every pass downloaded from now on. Passes already sent keep working.</p>
+    </header>
     <div class="swatches" id="swatches" role="group" aria-label="Colour theme"></div>
     <p class="msg" id="theme-msg" role="status"></p>
   </section>
 
-  <section class="whole" id="staff-box">
-    <p class="label">People who can sign in</p>
-    <p class="hint">Each person signs in with their own Google account. Door helpers can only scan passes. Organisers can also manage guests and change these settings.</p>
+  <section class="s-panel" id="staff-box" role="tabpanel" aria-labelledby="tab-people" hidden>
+    <header class="s-head">
+      <h2>People</h2>
+      <p>Everyone signs in with their own Google account. A door helper can only scan passes. An organiser can also manage guests and change these settings.</p>
+    </header>
     <ul class="staff" id="staff-rows"></ul>
-    <form class="event-form" id="staff-form" novalidate>
+    <form class="event-form s-card" id="staff-form" novalidate>
+      <h3 class="s-sub">Add a person</h3>
       <div class="row">
         <div class="field grow">
           <label class="label" for="staff-email">Gmail address</label>
           <input class="text-in" id="staff-email" type="email" inputmode="email" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="name@gmail.com">
         </div>
         <div class="field grow">
-          <label class="label" for="staff-role">Can</label>
+          <label class="label" for="staff-role">They can</label>
           <select class="text-in" id="staff-role"><option value="door">Scan at the door</option><option value="organiser">Organise everything</option></select>
         </div>
       </div>
@@ -446,9 +511,11 @@ dialog.pass::backdrop{background:var(--veil)}
     <p class="msg" id="staff-msg" role="status"></p>
   </section>
 
-  <section class="whole" id="lock-box">
-    <p class="label">Passcode</p>
-    <p class="hint" id="lock-state">Manage guests opens with a 6-digit passcode.</p>
+  <section class="s-panel" id="lock-box" role="tabpanel" aria-labelledby="tab-passcode" hidden>
+    <header class="s-head">
+      <h2>Passcode</h2>
+      <p id="lock-state">Manage guests opens with a 6-digit passcode.</p>
+    </header>
     <form class="lock-form" id="lock-form" novalidate hidden>
       <div class="row">
         <div class="field" id="lock-old-field" hidden>
@@ -469,15 +536,36 @@ dialog.pass::backdrop{background:var(--veil)}
     <p class="msg" id="lock-msg" role="status"></p>
   </section>
 
-  <section class="whole">
-    <p class="label">The whole list</p>
-    <div class="row">
-      <button class="btn ghost" type="button" id="open-import">Upload guests from Excel</button>
-      <button class="btn ghost" type="button" id="csv">Download guest list</button>
-      <button class="btn ghost" type="button" id="reset">Clear all check-ins</button>
+  <section class="s-panel" id="list-box" role="tabpanel" aria-labelledby="tab-list" hidden>
+    <header class="s-head">
+      <h2>Guest list</h2>
+      <p>Tools that work on the whole list at once.</p>
+    </header>
+    <div class="s-actions">
+      <div class="s-action">
+        <div>
+          <h3 class="s-sub">Upload from Excel</h3>
+          <p>Add many guests in one go. Names already on the list are left as they are.</p>
+        </div>
+        <button class="btn ghost" type="button" id="open-import">Upload guests</button>
+      </div>
+      <div class="s-action">
+        <div>
+          <h3 class="s-sub">Download the guest list</h3>
+          <p>A spreadsheet of every guest, their entry code and whether they have arrived.</p>
+        </div>
+        <button class="btn ghost" type="button" id="csv">Download list</button>
+      </div>
+      <div class="s-action">
+        <div>
+          <h3 class="s-sub">Clear all check-ins</h3>
+          <p>Makes every pass unused again. Use it after a test run, never during the event.</p>
+        </div>
+        <button class="btn ghost" type="button" id="reset">Clear check-ins</button>
+      </div>
     </div>
     <div class="m-form" id="reset-confirm" hidden>
-      <p>Clear every check-in? Every pass becomes unused again. Do this after a test run, never during the wedding.</p>
+      <p>Clear every check-in? Every pass becomes unused again.</p>
       <div class="row">
         <button class="btn" type="button" id="reset-yes">Yes, clear them all</button>
         <button class="btn ghost" type="button" id="reset-no">Keep them</button>
@@ -485,8 +573,16 @@ dialog.pass::backdrop{background:var(--veil)}
     </div>
     <p class="msg" id="reset-msg" role="status"></p>
   </section>
-  </div>
-</dialog>
+
+      </div>
+      <aside class="s-preview" id="s-preview" aria-label="Sample pass">
+        <p class="s-cap">A pass with these settings</p>
+        <img id="sample-img" alt="A sample guest pass drawn with the current event details and colours" width="1181" height="1772">
+        <p class="hint">The sample updates each time you save.</p>
+      </aside>
+    </div>
+  </main>
+</div>
 
 <dialog class="pass" id="gate" aria-labelledby="gate-title">
   <form class="pass-in" id="gate-form" novalidate>
@@ -539,6 +635,7 @@ dialog.pass::backdrop{background:var(--veil)}
   var importOpen = false, pending = null, importing = false, sheetReader = null, paint = 0;
   var noData = false;   // true when this device cannot open the guest list at all (signed out, or not invited)
   var noAccess = false, myEmail = '', staff = [];
+  var sTab = 'event', wantTab = '', sampleTurn = 0, sampleUrl = '';
   var cam = {on: false, stream: null, frame: 0, reading: false, last: '', lastAt: 0, tickAt: 0, detector: null, canvas: null};
   var lock = null, unlocked = false, wrong = 0, lockedUntil = 0;
 
@@ -603,15 +700,32 @@ dialog.pass::backdrop{background:var(--veil)}
     if (cfg.name1) paintCrest();
     $('event-nudge').hidden = !(isOwner && !eventSaved);
   }
-  function applyAll(){ applyTheme(); applyEvent(); renderSwatches(); }
+  function applyAll(){ applyTheme(); applyEvent(); renderSwatches(); if (mode === 'settings') paintSample(); }
   function renderSwatches(){
     var box = $('swatches'); box.textContent = '';
+    var initials = cfg.name1 ? cfg.name1.charAt(0).toUpperCase() + (cfg.name2 ? ' | ' + cfg.name2.charAt(0).toUpperCase() : '') : 'A | B';
     Object.keys(THEMES).forEach(function(key){
       var T = THEMES[key], b = el('button', 'swatch'); b.type = 'button'; b.dataset.theme = key; b.disabled = !isOwner;
       b.setAttribute('aria-pressed', String(cfg.theme === key));
-      var chip = el('i'); chip.style.background = 'linear-gradient(135deg, ' + T.accent + ' 0 50%, ' + T.paper + ' 50% 100%)';
-      b.appendChild(chip); b.appendChild(el('span', '', T.label)); box.appendChild(b);
+      var art = el('span', 'sw-art'); art.style.background = T.paper; art.setAttribute('aria-hidden', 'true');
+      var letters = el('b', '', initials); letters.style.color = T.accent;
+      var strip = el('i'); strip.style.background = T.accent;
+      art.appendChild(letters); art.appendChild(strip);
+      var name = el('span', 'sw-name'); name.appendChild(el('span', '', T.label)); name.appendChild(el('small', '', 'In use'));
+      b.appendChild(art); b.appendChild(name); box.appendChild(b);
     });
+  }
+  // the sample pass beside Event details and Colours, drawn the same way as a real one
+  async function paintSample(){
+    var turn = ++sampleTurn;
+    if (!window.qrcode || !window.jsQR || (sTab !== 'event' && sTab !== 'theme')) return;
+    try {
+      var blob = await passBlob({code: 'SAMP-LE22', name: 'Guest Name', list: LISTS[0], no: 0, checkedInAt: 0});
+      if (turn !== sampleTurn) return;
+      var url = URL.createObjectURL(blob); $('sample-img').src = url;
+      if (sampleUrl) { try { URL.revokeObjectURL(sampleUrl); } catch (e) {} }
+      sampleUrl = url;
+    } catch (e) {}
   }
   async function saveCfg(next, msgId, done){
     try { await db.doc('settings/event').set(next); cfg = cleanCfg(next); try { localStorage.setItem('event-cfg', JSON.stringify(cfg)); } catch (e) {} applyAll(); say(msgId, done, 'good'); return true; }
@@ -621,8 +735,8 @@ dialog.pass::backdrop{background:var(--veil)}
     $('ev-type').value = cfg.type; $('ev-name1').value = cfg.name1; $('ev-name2').value = cfg.name2;
     $('ev-date').value = cfg.date; $('ev-time').value = cfg.time; $('ev-venue').value = cfg.venue;
     $('event-form').hidden = !isOwner;
-    $('event-state').textContent = isOwner ? 'These show at the top of this page and on every pass. Passes already sent keep working; download a pass again to get the new details on it.'
-                                           : 'Only the organiser can change the event details and colours.';
+    $('event-state').textContent = isOwner ? 'These show at the top of every page and on every pass. Passes already sent keep working; download a pass again to get the new details on it.'
+                                           : 'Only an organiser can change the event details and colours.';
   }
   $('event-form').addEventListener('submit', async function(e){
     e.preventDefault();
@@ -1438,8 +1552,7 @@ dialog.pass::backdrop{background:var(--veil)}
   });
   $('import-close').addEventListener('click', function(){ if (importing) return; importOpen = false; resetImport(''); renderAdmin(); });
   $('open-import').addEventListener('click', function(){
-    closeSettings(); importOpen = true; resetImport(''); renderAdmin();
-    try { $('import').scrollIntoView({block: 'start'}); } catch (e) {}
+    importOpen = true; resetImport(''); closeSettings();
   });
 
   /* ---------- drawing a pass, to match the printed ones: 100 x 150 mm at 300 dpi ---------- */
@@ -1637,18 +1750,21 @@ dialog.pass::backdrop{background:var(--veil)}
   });
 
   /* ================= switching between the door and the guest list ================= */
-  function render(){ renderTally(); if (mode === 'admin') renderAdmin(); else renderDoor(); }
+  function render(){ renderTally(); if (mode === 'admin') renderAdmin(); else if (mode === 'door') renderDoor(); }
   function setMode(m){
-    mode = m === 'admin' && unlocked ? 'admin' : 'door';
+    mode = (m === 'admin' || m === 'settings') && unlocked ? m : 'door';
     if (mode !== 'door') stopCamera();
-    $('door').hidden = mode !== 'door'; $('admin').hidden = mode !== 'admin';
-    $('page-title').textContent = mode === 'admin' ? 'Guest list' : 'Guest check-in';
-    $('switch').textContent = mode === 'admin' ? 'Door check-in' : 'Manage guests';
+    $('door').hidden = mode !== 'door'; $('admin').hidden = mode !== 'admin'; $('settings').hidden = mode !== 'settings';
+    $('page-title').textContent = mode === 'admin' ? 'Guest list' : mode === 'settings' ? 'Settings' : 'Guest check-in';
+    $('switch').textContent = mode === 'door' ? 'Manage guests' : 'Door check-in';
     $('open-settings').hidden = mode !== 'admin';
+    document.body.classList.toggle('on-settings', mode === 'settings');
+    // the address keeps track of where you are, so a reload comes back to the same place (after the passcode)
+    try { history.replaceState(null, '', mode === 'door' ? location.pathname + location.search : mode === 'admin' ? '#admin' : '#settings-' + sTab); } catch (e) {}
     render();
   }
   $('switch').addEventListener('click', function(){
-    if (mode === 'admin') { leaveManager(); return; }
+    if (mode !== 'door') { leaveManager(); return; }
     askForManager();
   });
 
@@ -1717,32 +1833,71 @@ dialog.pass::backdrop{background:var(--veil)}
   });
   function enterManager(){
     unlocked = true; setMode('admin'); renderLock(); window.scrollTo(0, 0);
+    if (wantTab) { var go = wantTab; wantTab = ''; openSettings(go); }
   }
+  function clearPins(){ ['lock-old', 'lock-new', 'lock-again'].forEach(function(id){ $(id).value = ''; }); }
   function leaveManager(){
-    // going back to the door locks the manager again
-    unlocked = false; rowState = null; closePass(); closeSettings();
+    // going back to the door locks the manager and its settings again
+    unlocked = false; rowState = null; closePass(); clearPins();
     if (!importing) { importOpen = false; resetImport(''); }
     setMode('door'); window.scrollTo(0, 0);
   }
-  function openSettings(toPasscode){
-    var dlg = $('settings');
-    renderLock(); say('lock-msg', ''); say('reset-msg', ''); resetStep(false);
-    fillEventForm(); renderSwatches(); renderStaff(); say('event-msg', ''); say('theme-msg', ''); say('staff-msg', '');
-    if (!dlg.open) { if (dlg.showModal) { try { dlg.showModal(); } catch (e) { dlg.setAttribute('open', ''); } } else dlg.setAttribute('open', ''); }
-    if (toPasscode === true && isOwner) { var box = $(lock ? 'lock-old' : 'lock-new'); try { box.scrollIntoView({block: 'center'}); } catch (e) {} box.focus(); }
-    else { try { dlg.scrollTop = 0; } catch (e) {} $('settings-close').focus(); }
+  /* ================= settings: its own page, one tab per section ================= */
+  var TABS = {event: ['event-box', 'Event details'], theme: ['theme-box', 'Colours'], people: ['staff-box', 'People'],
+              passcode: ['lock-box', 'Passcode'], list: ['list-box', 'Guest list']};
+  function showTab(name){
+    if (!TABS[name]) name = 'event';
+    sTab = name;
+    Object.keys(TABS).forEach(function(k){
+      var on = k === name, tab = $('tab-' + k);
+      $(TABS[k][0]).hidden = !on;
+      tab.setAttribute('aria-selected', String(on)); tab.tabIndex = on ? 0 : -1;
+    });
+    $('crumb-here').textContent = TABS[name][1];
+    var preview = name === 'event' || name === 'theme';
+    $('s-preview').hidden = !preview; $('s-cols').classList.toggle('with-preview', preview);
+    if (mode === 'settings') { try { history.replaceState(null, '', '#settings-' + name); } catch (e) {} }
+    // keep the chosen tab in view on a narrow screen, and bring the top of the section up under the bar
+    try { var bar = $('tab-' + name).parentNode, tb = $('tab-' + name); bar.scrollLeft = Math.max(0, tb.offsetLeft - bar.offsetLeft - 40); } catch (e) {}
+    var top = $('settings').getBoundingClientRect().top + window.scrollY;
+    if (window.scrollY > top) window.scrollTo(0, top);
+    if (preview) paintSample();
+  }
+  // openSettings() opens the first tab, openSettings('people') a named one, openSettings(true) the passcode box
+  function openSettings(where){
+    if (!unlocked) return;
+    renderLock(); resetStep(false); fillEventForm(); renderSwatches(); renderStaff();
+    ['lock-msg', 'reset-msg', 'event-msg', 'theme-msg', 'staff-msg'].forEach(function(id){ say(id, ''); });
+    var tab = where === true ? 'passcode' : (typeof where === 'string' && TABS[where] ? where : 'event');
+    sTab = tab; setMode('settings'); showTab(tab);
+    window.scrollTo(0, 0);
+    if (where === true && isOwner) $(lock ? 'lock-old' : 'lock-new').focus();
   }
   function closeSettings(){
-    var dlg = $('settings');
-    ['lock-old', 'lock-new', 'lock-again'].forEach(function(id){ $(id).value = ''; });
-    if (dlg.open) { if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); }
+    clearPins();
+    if (mode === 'settings') { setMode('admin'); window.scrollTo(0, 0); }
+    if (importOpen) { try { $('import').scrollIntoView({block: 'start'}); } catch (e) {} }
   }
+  $('s-bar').addEventListener('click', function(e){
+    var tab = e.target.closest ? e.target.closest('[data-tab]') : null;
+    if (tab) showTab(tab.dataset.tab);
+  });
+  $('s-bar').addEventListener('keydown', function(e){
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    var tab = e.target.closest ? e.target.closest('[data-tab]') : null; if (!tab) return;
+    var keys = Object.keys(TABS), i = keys.indexOf(tab.dataset.tab) + (e.key === 'ArrowRight' ? 1 : -1);
+    var next = keys[(i + keys.length) % keys.length];
+    e.preventDefault(); showTab(next); $('tab-' + next).focus();
+  });
+  $('crumb-door').addEventListener('click', leaveManager);
+  $('crumb-settings').addEventListener('click', function(){ showTab('event'); window.scrollTo(0, 0); });
+
   ['lock-old', 'lock-new', 'lock-again', 'gate-pin'].forEach(function(id){
     $(id).addEventListener('input', function(e){ var d = e.target.value.replace(/[^0-9]/g, '').slice(0, 6); if (d !== e.target.value) e.target.value = d; });
   });
-  $('open-settings').addEventListener('click', function(){ openSettings(false); });
+  $('open-settings').addEventListener('click', function(){ openSettings('event'); });
   $('lock-nudge-go').addEventListener('click', function(){ openSettings(true); });
-  $('event-nudge-go').addEventListener('click', function(){ openSettings(false); });
+  $('event-nudge-go').addEventListener('click', function(){ openSettings('event'); });
   $('settings-close').addEventListener('click', closeSettings);
   function renderLock(){
     $('lock-form').hidden = !isOwner;
@@ -1817,7 +1972,8 @@ dialog.pass::backdrop{background:var(--veil)}
         .sort(function(a, b){ return a.role === b.role ? (a.email < b.email ? -1 : 1) : (a.role === 'organiser' ? -1 : 1); });
       renderStaff();
     }, function(){});
-    if (isOwner && location.hash === '#admin') askForManager();
+    var deep = /^#settings-([a-z]+)$/.exec(location.hash);
+    if (isOwner && (location.hash === '#admin' || deep)) { wantTab = deep ? deep[1] : ''; askForManager(); }
     db.collection('guests').onSnapshot(function(snap){
       guests.clear();
       snap.docs.forEach(function(d){
