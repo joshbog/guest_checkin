@@ -297,7 +297,7 @@ dialog.pass::backdrop{background:var(--veil)}
 .rows li.door-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:16px}
 .r-main{display:grid;gap:2px;min-width:0}
 .r-list{font-size:.92rem;color:var(--muted)}
-.r-by{max-width:15rem;text-align:right;font-size:.92rem;line-height:1.35;color:var(--muted);font-variant-numeric:tabular-nums}
+.r-by{display:grid;gap:1px;justify-items:end;max-width:15rem;text-align:right;font-size:.92rem;line-height:1.35;color:var(--muted);font-variant-numeric:tabular-nums}
 .sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .sheet-head .eyebrow{min-width:0;overflow-wrap:anywhere}
 .icon-btn{flex:none;width:44px;height:44px;display:grid;place-items:center;padding:0;background:transparent;color:var(--accent);
@@ -1360,7 +1360,12 @@ dialog.pass::backdrop{background:var(--veil)}
       main.appendChild(el('span', 'r-name', g.name));
       main.appendChild(el('span', 'r-list', g.list));
       li.appendChild(main);
-      if (g.checkedInAt) li.appendChild(el('span', 'r-by', (byName(g) ? 'Checked by ' + byName(g) : 'Checked in') + ' · ' + clock(g.checkedInAt)));
+      if (g.checkedInAt) {   // "Checked", then the time and who checked them in
+        var by = el('span', 'r-by');
+        by.appendChild(el('span', 'r-by-label', 'Checked'));
+        by.appendChild(el('span', 'r-by-line', clock(g.checkedInAt) + (byName(g) ? ' · ' + byName(g) : '')));
+        li.appendChild(by);
+      }
       else if (ciLock && canWrite && db) {
         var go = el('button', 'btn ghost small r-act', 'Check in'); go.type = 'button'; go.dataset.code = g.code;
         go.setAttribute('aria-label', 'Check in ' + g.name);
