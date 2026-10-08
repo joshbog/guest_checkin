@@ -170,6 +170,8 @@ button,input,select{font:inherit;color:inherit}
   color:var(--on-wine);font:400 clamp(2.1rem,9vw,3.2rem)/1.05 var(--display)}
 .menu-item::after{content:"\2192";font:300 .5em/1 var(--body);color:var(--on-wine-soft);transition:transform .25s cubic-bezier(.2,.8,.2,1),color .25s}
 .menu-item:hover::after,.menu-item:focus-visible::after{transform:translateX(8px);color:var(--on-wine)}
+.menu-item[aria-current="page"]{color:var(--on-wine-soft);font-style:italic}   /* the page you are on: same place in the menu, marked, not hidden */
+.menu-item[aria-current="page"]::after{content:"";width:.32em;height:.32em;border-radius:50%;background:currentColor;align-self:center;transform:none}
 .menu-item:focus-visible{outline:none;text-decoration:underline;text-underline-offset:.18em;text-decoration-thickness:1px}
 .menu-foot{margin-top:auto;display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:12px 24px}
 .menu-out{padding:8px 0;background:transparent;border:0;border-bottom:1px solid var(--on-wine-soft);border-radius:0;cursor:pointer;
@@ -373,9 +375,9 @@ dialog.pass::backdrop{background:var(--veil)}
           </div>
           <p class="menu-who menu-anim" id="who" hidden><span class="menu-label">Signed in as</span><span id="who-email"></span></p>
           <div class="menu-links">
-            <button class="menu-item menu-anim" type="button" id="switch" hidden>Manage guests</button>
-            <button class="menu-item menu-anim" type="button" id="settings-close" hidden>Manage guests</button>
-            <button class="menu-item menu-anim" type="button" id="open-settings" hidden>Settings</button>
+            <button class="menu-item menu-anim" type="button" id="nav-door" aria-current="page" hidden>Door check-in</button>
+            <button class="menu-item menu-anim" type="button" id="nav-admin" hidden>Manage guests</button>
+            <button class="menu-item menu-anim" type="button" id="nav-settings" hidden>Settings</button>
           </div>
           <div class="menu-foot">
             <button class="menu-out menu-anim" type="button" id="signout" hidden>Sign out</button>
@@ -1214,7 +1216,7 @@ dialog.pass::backdrop{background:var(--veil)}
   });
   /* ================= the header menu ================= */
   // The menu button shows only when the menu has something in it, so a signed-out phone sees none.
-  function menuHasItems(){ return ['who', 'switch', 'settings-close', 'open-settings', 'signout'].some(function(id){ return !$(id).hidden; }); }
+  function menuHasItems(){ return ['who', 'nav-door', 'nav-admin', 'nav-settings', 'signout'].some(function(id){ return !$(id).hidden; }); }
   function calm(){ try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } }
   function openMenu(){
     var p = $('menu-panel');
@@ -2417,17 +2419,23 @@ dialog.pass::backdrop{background:var(--veil)}
     if (mode !== 'door') stopCamera();
     $('door').hidden = mode !== 'door'; $('admin').hidden = mode !== 'admin'; $('settings').hidden = mode !== 'settings';
     $('page-title').textContent = mode === 'admin' ? 'Guest list' : mode === 'settings' ? 'Settings' : 'Guest check-in';
-    $('switch').textContent = mode === 'door' ? 'Manage guests' : 'Door check-in';
-    $('open-settings').hidden = mode !== 'admin';
-    $('settings-close').hidden = mode !== 'settings';   // from Settings, back to the guest list
+    // organisers always see the same three places, in the same order; the one you are on is marked
+    [['nav-door', 'door'], ['nav-admin', 'admin'], ['nav-settings', 'settings']].forEach(function(n){
+      if (mode === n[1]) $(n[0]).setAttribute('aria-current', 'page'); else $(n[0]).removeAttribute('aria-current');
+    });
     document.body.classList.toggle('on-settings', mode === 'settings');
     // the address keeps track of where you are, so a reload comes back to the same place (after the passcode)
     try { history.replaceState(null, '', mode === 'door' ? location.pathname + location.search : mode === 'admin' ? '#admin' : '#settings-' + sTab); } catch (e) {}
     render();
   }
-  $('switch').addEventListener('click', function(){
-    if (mode !== 'door') { leaveManager(); return; }
-    askForManager();
+  $('nav-door').addEventListener('click', function(){ if (mode !== 'door') leaveManager(); });
+  $('nav-admin').addEventListener('click', function(){
+    if (mode === 'settings') closeSettings();
+    else if (mode === 'door') { wantTab = ''; askForManager(); }
+  });
+  $('nav-settings').addEventListener('click', function(){
+    if (mode === 'admin') openSettings('event');
+    else if (mode === 'door') { wantTab = 'event'; askForManager(); }   // after the passcode, straight to Settings
   });
 
   /* ================= the passcode on Manage guests ================= */
@@ -2558,10 +2566,8 @@ dialog.pass::backdrop{background:var(--veil)}
   ['lock-old', 'lock-new', 'lock-again', 'gate-pin', 'ci-new', 'ci-again', 'ci-pin', 'lock-off-pin'].forEach(function(id){
     $(id).addEventListener('input', function(e){ var d = e.target.value.replace(/[^0-9]/g, '').slice(0, 6); if (d !== e.target.value) e.target.value = d; });
   });
-  $('open-settings').addEventListener('click', function(){ openSettings('event'); });
   $('lock-nudge-go').addEventListener('click', function(){ openSettings(true); });
   $('event-nudge-go').addEventListener('click', function(){ openSettings('event'); });
-  $('settings-close').addEventListener('click', closeSettings);
   function renderLock(){
     if (lock) lockSetting = false;
     $('lock-form').hidden = !isOwner || !(lock || lockSetting);   // with no passcode the form shows only while turning it on
@@ -2746,7 +2752,7 @@ dialog.pass::backdrop{background:var(--veil)}
       notice(myEmail + ' has not been invited to this guest list. Ask an organiser to add this Gmail address in Settings, then reload.');
       return;
     }
-    $('switch').hidden = !isOwner;   // door helpers only scan
+    ['nav-door', 'nav-admin', 'nav-settings'].forEach(function(id){ $(id).hidden = !isOwner; });   // door helpers only scan
     try { lockedUntil = Number(localStorage.getItem('gate-wait')) || 0; } catch (e) {}
     try { ciUntil = Number(localStorage.getItem('ci-wait')) || 0; } catch (e) {}
     db.doc('settings/checkin').onSnapshot(function(snap){
