@@ -20,7 +20,7 @@
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 img{max-width:100%}
 [hidden]{display:none!important}
-/* Layout: the door desk. The crest and title, the burgundy date strip carrying the live tally,
+/* Layout: the door desk. The crest and title, the quiet ivory date strip carrying the live tally,
    then one of two views: the door (a large verdict panel, the scan button, the ledger of arrivals)
    or, for the couple only, the guest list manager (find, add, edit, remove, passes).
    Single ivory look on purpose, to match the wedding website. */
@@ -28,6 +28,7 @@ img{max-width:100%}
   color-scheme:light;
   --paper:#FBF7EE;        /* ivory, the main colour */
   --paper-2:#F4EDDE;      /* deeper ivory */
+  --strip:#E8E1D2;        /* the date strip: the deeper ivory, a shade darker */
   --banner:#FFFDF8;       /* flat banner white */
   --ink:#33221A;
   --muted:#6C594B;
@@ -72,13 +73,13 @@ button,input,select{font:inherit;color:inherit}
 .crest{width:clamp(72px,20vw,104px);height:auto;color:var(--accent);flex:none;display:block}
 .mast-text{display:grid;gap:6px;min-width:0;flex:1 1 9rem}
 .mast h1{font:400 clamp(1.6rem,6.4vw,2.3rem)/1.08 var(--display);text-wrap:balance}
-.carpet{background:var(--wine);color:var(--on-wine);box-shadow:inset 0 10px 14px -10px var(--shadow)}
+.carpet{background:var(--strip);color:var(--accent);border-block:1px solid var(--line)}   /* quiet, so burgundy is left for what you tap */
 .carpet ul{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 28px;padding-block:14px;
   font:500 .8rem/1.5 var(--body);letter-spacing:.16em;text-transform:uppercase}
 .carpet li{min-width:0}
 .tally{font-variant-numeric:tabular-nums lining-nums}
 .tally b{font-weight:500;font-size:1.35em;letter-spacing:.04em}
-.tally i{font-style:normal;color:var(--on-wine-soft)}
+.tally i{font-style:normal;color:var(--muted)}
 
 /* ---------- shared controls ---------- */
 .btn{display:inline-grid;place-items:center;font:500 .8rem/1 var(--body);letter-spacing:.14em;text-transform:uppercase;text-decoration:none;cursor:pointer;
@@ -701,7 +702,7 @@ dialog.pass::backdrop{background:var(--veil)}
   }
   function applyTheme(){
     var T = THEMES[cfg.theme] || THEMES.burgundy, st = document.documentElement.style;
-    [['--paper', T.paper], ['--paper-2', T.paper2], ['--banner', T.banner], ['--ink', T.ink], ['--muted', T.muted], ['--accent', T.accent],
+    [['--paper', T.paper], ['--paper-2', T.paper2], ['--strip', blend(T.ink, T.paper2, .06)], ['--banner', T.banner], ['--ink', T.ink], ['--muted', T.muted], ['--accent', T.accent],
      ['--wine', T.accent], ['--wine-deep', T.deep], ['--on-wine', T.on], ['--on-wine-soft', T.onSoft],
      ['--line', rgba(T.accent, .2)], ['--shadow', rgba(T.deep, .32)], ['--veil', rgba(T.ink, .55)]].forEach(function(p){ st.setProperty(p[0], p[1]); });
     C = {paper: T.paper, ink: T.ink, muted: T.muted, wine: T.accent, wineDeep: T.deep, onWine: T.on, onWineSoft: T.onSoft, line: blend(T.accent, T.paper, .2)};
