@@ -29,6 +29,7 @@ img{max-width:100%}
   --paper:#FBF7EE;        /* ivory, the main colour */
   --paper-2:#F4EDDE;      /* deeper ivory */
   --strip:#E8E1D2;        /* the date strip: the deeper ivory, a shade darker */
+  --tab-on:#EADCD6;       /* the chosen Arrived / Still to come tab: a pale burgundy, quieter than Scan a pass */
   --banner:#FFFDF8;       /* flat banner white */
   --ink:#33221A;
   --muted:#6C594B;
@@ -155,7 +156,7 @@ button,input,select{font:inherit;color:inherit}
 .tabs{display:flex;gap:0;border-bottom:1px solid var(--accent)}
 .tabs button{flex:1 1 0;min-width:0;padding:13px 8px;background:transparent;border:0;border-radius:0;cursor:pointer;
   font:500 .78rem/1.3 var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
-.tabs button[aria-selected="true"]{background:var(--wine);color:var(--on-wine)}
+.tabs button[aria-selected="true"]{background:var(--tab-on);color:var(--accent)}
 .tabs b,.chip b{font-weight:500;font-variant-numeric:tabular-nums;margin-left:.4em}
 .rows li{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 16px;padding-block:13px;border-bottom:1px solid var(--line)}
 .r-name{font:400 1.18rem/1.25 var(--display);min-width:0;overflow-wrap:anywhere}
@@ -748,7 +749,7 @@ dialog.pass::backdrop{background:var(--veil)}
   }
   function applyTheme(){
     var T = THEMES[cfg.theme] || THEMES.burgundy, st = document.documentElement.style;
-    [['--paper', T.paper], ['--paper-2', T.paper2], ['--strip', blend(T.ink, T.paper2, .06)], ['--banner', T.banner], ['--ink', T.ink], ['--muted', T.muted], ['--accent', T.accent],
+    [['--paper', T.paper], ['--paper-2', T.paper2], ['--strip', blend(T.ink, T.paper2, .06)], ['--tab-on', blend(T.accent, T.paper, .12)], ['--banner', T.banner], ['--ink', T.ink], ['--muted', T.muted], ['--accent', T.accent],
      ['--wine', T.accent], ['--wine-deep', T.deep], ['--on-wine', T.on], ['--on-wine-soft', T.onSoft],
      ['--line', rgba(T.accent, .2)], ['--shadow', rgba(T.deep, .32)], ['--veil', rgba(T.ink, .55)]].forEach(function(p){ st.setProperty(p[0], p[1]); });
     C = {paper: T.paper, ink: T.ink, muted: T.muted, wine: T.accent, wineDeep: T.deep, onWine: T.on, onWineSoft: T.onSoft, line: blend(T.accent, T.paper, .2)};
