@@ -899,7 +899,12 @@ dialog.pass::backdrop{background:var(--veil)}
     $('v-eyebrow').textContent = eyebrow;
     $('v-name').textContent = name;
     $('v-note').textContent = note || '';
+    admitOpen = kind === 'ok';
+    syncScan();
   }
+  // Scan a pass is offered only when the camera is closed and the last admitted guest's result has been closed.
+  var admitOpen = false;
+  function syncScan(){ $('scan-live').hidden = cam.on || admitOpen; }
   function showReady(){ show('idle', 'Ready', "Scan a guest's pass", cam.on ? "Hold the next guest's QR code in front of the camera." : "Tap Scan a pass and hold the guest's QR code in front of the camera."); }
   $('v-close').addEventListener('click', function(){ if (!busy) showReady(); });
   function showGuest(kind, g){
@@ -911,21 +916,73 @@ dialog.pass::backdrop{background:var(--veil)}
     show('bad', 'Not valid · do not admit', 'Not on the guest list', code ? 'Code read: ' + code : 'That QR code is not a wedding pass.');
   }
 
+  /* ================= the door: sounds for an admitted guest and for a refused pass ================= */
+  // Browsers only allow a page to make sound after a tap, so the sound is made ready by the taps that start a scan or check a code.
+  var audio = null;
+  function armSound(){
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      if (!audio) audio = new AC();
+      if (audio.state === 'suspended') audio.resume();
+    } catch (e) {}
+  }
+  // Two short rising notes.
+  function chime(){
+    if (!audio) return;
+    try {
+      if (audio.state === 'suspended') audio.resume();
+      var t = audio.currentTime + 0.02;
+      [[880, 0, .16], [1318.5, .13, .36]].forEach(function(n){
+        var o = audio.createOscillator(), g = audio.createGain();
+        o.type = 'sine'; o.frequency.value = n[0];
+        g.gain.setValueAtTime(0.0001, t + n[1]);
+        g.gain.exponentialRampToValueAtTime(0.5, t + n[1] + 0.015);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + n[1] + n[2]);
+        o.connect(g); g.connect(audio.destination);
+        o.start(t + n[1]); o.stop(t + n[1] + n[2] + 0.03);
+      });
+    } catch (e) {}
+  }
+
+  // One low, rough buzz.
+  function buzz(){
+    if (!audio) return;
+    try {
+      if (audio.state === 'suspended') audio.resume();
+      var t = audio.currentTime + 0.02, o = audio.createOscillator(), g = audio.createGain();
+      o.type = 'sawtooth'; o.frequency.value = 140;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.32, t + 0.02);
+      g.gain.setValueAtTime(0.32, t + 0.42);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+      o.connect(g); g.connect(audio.destination);
+      o.start(t); o.stop(t + 0.53);
+    } catch (e) {}
+  }
+
   /* ================= the door: checking a code in ================= */
   async function checkIn(code){
     if (busy) return;
     busy = true;
     show('busy', 'Checking', code, 'Looking this pass up on the guest list.');
     try {
-      if (!db) { show('miss', 'Not signed in', 'Guest list unavailable', 'Sign in with Google to check guests in.'); return; }
-      if (!canWrite) { show('miss', 'Not invited', 'This account cannot check guests in', 'Ask an organiser to add this Gmail address in Settings.'); return; }
+      if (!db) { buzz(); show('miss', 'Not signed in', 'Guest list unavailable', 'Sign in with Google to check guests in.'); return; }
+      if (!canWrite) { buzz(); show('miss', 'Not invited', 'This account cannot check guests in', 'Ask an organiser to add this Gmail address in Settings.'); return; }
       // Unknown codes stop here, so a made-up code never touches the guest list.
-      if (loaded && !guests.has(code)) { showBad(code); return; }
+      if (loaded && !guests.has(code)) { buzz(); showBad(code); return; }
       // The database admits a pass in one atomic step, so two doors scanning it in the same second cannot both let it in.
       var res = await db.checkIn(code);
-      if (res.status === 'missing') showBad(code);
-      else showGuest(res.status === 'ok' ? 'ok' : 'dup', res.guest);
+      if (res.status === 'missing') { buzz(); showBad(code); }
+      else if (res.status === 'ok') {
+        // Admitted: sound the chime and close the camera. The result has to be closed before the next pass can be scanned.
+        chime();
+        if (cam.on) stopCamera();
+        showGuest('ok', res.guest);
+      }
+      else { buzz(); showGuest('dup', res.guest); }
     } catch (e) {
+      buzz();
       show('miss', 'Not saved', 'Could not check this pass', 'The guest list did not answer. Check the signal and scan the pass again.');
     } finally {
       busy = false;
@@ -936,6 +993,7 @@ dialog.pass::backdrop{background:var(--veil)}
   function keepAwake(){ try { if (navigator.wakeLock && navigator.wakeLock.request) navigator.wakeLock.request('screen').catch(function(){}); } catch (e) {} }
   async function startCamera(){
     if (cam.on) return;
+    armSound();
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       show('miss', 'No camera', 'This browser cannot open the camera', 'Type the entry code printed on the pass instead.'); return;
     }
@@ -948,16 +1006,16 @@ dialog.pass::backdrop{background:var(--veil)}
     try { await v.play(); } catch (e) {}
     cam.on = true; cam.last = ''; cam.detector = null;
     if ('BarcodeDetector' in window) { try { cam.detector = new window.BarcodeDetector({formats: ['qr_code']}); } catch (e) {} }
-    $('scanner').hidden = false; $('scan-live').hidden = true;
+    $('scanner').hidden = false; syncScan();
     keepAwake();
-    if ($('verdict').className.indexOf('idle') >= 0 || $('verdict').className.indexOf('miss') >= 0) showReady();
+    if (!busy) showReady();   // the last guest's result is cleared, so it cannot be mistaken for the next guest's
     cam.frame = requestAnimationFrame(watch);
   }
   function stopCamera(){
     cam.on = false; cancelAnimationFrame(cam.frame);
     if (cam.stream) { try { cam.stream.getTracks().forEach(function(tr){ tr.stop(); }); } catch (e) {} cam.stream = null; }
     try { $('cam').srcObject = null; } catch (e) {}
-    $('scanner').hidden = true; $('scan-live').hidden = false;
+    $('scanner').hidden = true; syncScan();
   }
   async function watch(){
     if (!cam.on) return;
@@ -990,7 +1048,7 @@ dialog.pass::backdrop{background:var(--veil)}
     cam.last = raw; cam.lastAt = now;
     try { if (navigator.vibrate) navigator.vibrate(70); } catch (e) {}
     var code = norm(raw);
-    if (!code) { showBad(''); return; }
+    if (!code) { buzz(); showBad(''); return; }
     checkIn(code);
   }
   $('scan-live').addEventListener('click', startCamera);
@@ -1002,6 +1060,7 @@ dialog.pass::backdrop{background:var(--veil)}
     if (!typed.trim()) return;
     if (!code) { show('miss', 'Check the code', 'Entry codes have 8 characters', 'Type the code exactly as printed under the QR code, for example 7ABC-2DEF.'); return; }
     $('code').value = '';
+    armSound();
     checkIn(code);
   });
 
