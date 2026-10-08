@@ -234,6 +234,11 @@ dialog.pass::backdrop{background:var(--veil)}
 .pass-in{display:grid;gap:12px;padding:16px}
 .pass-in img{display:block;width:100%;height:auto;border:1px solid var(--line);background:var(--banner)}
 .pass-in .hint{color:var(--muted);font-size:.95rem}
+.ci-name{font:400 1.6rem/1.15 var(--display);overflow-wrap:anywhere;margin-top:-4px}
+/* a row with a Check in button: name over list on the left, the button on the right, the same on every row */
+.rows li.has-act{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:16px;row-gap:2px}
+.rows li.has-act .r-name,.rows li.has-act .r-meta{grid-column:1}
+.rows li.has-act .r-act{grid-column:2;grid-row:1 / span 2}
 .sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .sheet-head .eyebrow{min-width:0;overflow-wrap:anywhere}
 .icon-btn{flex:none;width:44px;height:44px;display:grid;place-items:center;padding:0;background:transparent;color:var(--accent);
@@ -447,6 +452,7 @@ dialog.pass::backdrop{background:var(--veil)}
         <button type="button" role="tab" id="tab-theme" data-tab="theme" aria-controls="theme-box" aria-selected="false" tabindex="-1">Colours</button>
         <button type="button" role="tab" id="tab-people" data-tab="people" aria-controls="staff-box" aria-selected="false" tabindex="-1">People</button>
         <button type="button" role="tab" id="tab-passcode" data-tab="passcode" aria-controls="lock-box" aria-selected="false" tabindex="-1">Passcode</button>
+        <button type="button" role="tab" id="tab-checkin" data-tab="checkin" aria-controls="ci-box" aria-selected="false" tabindex="-1">Check-in code</button>
         <button type="button" role="tab" id="tab-list" data-tab="list" aria-controls="list-box" aria-selected="false" tabindex="-1">Guest list</button>
       </div>
     </div>
@@ -552,6 +558,27 @@ dialog.pass::backdrop{background:var(--veil)}
     <p class="msg" id="lock-msg" role="status"></p>
   </section>
 
+  <section class="s-panel" id="ci-box" role="tabpanel" aria-labelledby="tab-checkin" hidden>
+    <header class="s-head">
+      <h2>Check-in code</h2>
+      <p class="hint" id="ci-state">No check-in code yet.</p>
+    </header>
+    <form class="lock-form" id="ci-form" novalidate>
+      <div class="row">
+        <div class="field">
+          <label class="label" for="ci-new">New check-in code</label>
+          <input class="text-in pin" id="ci-new" type="text" inputmode="numeric" autocorrect="off" spellcheck="false" pattern="[0-9]*" maxlength="6" autocomplete="off">
+        </div>
+        <div class="field">
+          <label class="label" for="ci-again">New check-in code again</label>
+          <input class="text-in pin" id="ci-again" type="text" inputmode="numeric" autocorrect="off" spellcheck="false" pattern="[0-9]*" maxlength="6" autocomplete="off">
+        </div>
+      </div>
+      <button class="btn" type="submit" id="ci-go">Set check-in code</button>
+    </form>
+    <p class="msg" id="ci-msg" role="status"></p>
+  </section>
+
   <section class="s-panel" id="list-box" role="tabpanel" aria-labelledby="tab-list" hidden>
     <header class="s-head">
       <h2>Guest list</h2>
@@ -611,6 +638,23 @@ dialog.pass::backdrop{background:var(--veil)}
     <div class="row">
       <button class="btn" type="submit" id="gate-go">Open</button>
       <button class="btn ghost" type="button" id="gate-cancel">Cancel</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="pass" id="ci-gate" aria-labelledby="ci-title">
+  <form class="pass-in" id="ci-gate-form" novalidate>
+    <p class="eyebrow">Check in without a pass</p>
+    <h2 class="ci-name" id="ci-title"></h2>
+    <p class="hint" id="ci-list"></p>
+    <div class="field">
+      <label class="label" for="ci-pin">Enter the check-in code</label>
+      <input class="text-in pin" id="ci-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off">
+    </div>
+    <p class="msg" id="ci-gate-msg" role="status"></p>
+    <div class="row">
+      <button class="btn" type="submit" id="ci-gate-go">Check in</button>
+      <button class="btn ghost" type="button" id="ci-gate-cancel">Cancel</button>
     </div>
   </form>
 </dialog>
@@ -909,9 +953,10 @@ dialog.pass::backdrop{background:var(--veil)}
     admitOpen = kind === 'ok';
     syncScan();
   }
-  // Scan a pass is offered only when the camera is closed and the last admitted guest's result has been closed.
+  // Scan a pass shows whenever the camera is closed. After an admit it reads Scan a new pass; tapping it
+  // clears the result and opens the camera for the next guest.
   var admitOpen = false;
-  function syncScan(){ $('scan-live').hidden = cam.on || admitOpen; }
+  function syncScan(){ var b = $('scan-live'); b.hidden = cam.on; b.textContent = admitOpen ? 'Scan a new pass' : 'Scan a pass'; }
   function showReady(){ show('idle', 'Ready', "Scan a guest's pass", cam.on ? "Hold the next guest's QR code in front of the camera." : "Tap Scan a pass and hold the guest's QR code in front of the camera."); }
   $('v-close').addEventListener('click', function(){ if (!busy) showReady(); });
   function showGuest(kind, g){
@@ -982,7 +1027,7 @@ dialog.pass::backdrop{background:var(--veil)}
       var res = await db.checkIn(code);
       if (res.status === 'missing') { buzz(); showBad(code); }
       else if (res.status === 'ok') {
-        // Admitted: sound the chime and close the camera. The result has to be closed before the next pass can be scanned.
+        // Admitted: sound the chime and close the camera. Scan a new pass clears the result and opens it again.
         chime();
         if (cam.on) stopCamera();
         showGuest('ok', res.guest);
@@ -1104,7 +1149,12 @@ dialog.pass::backdrop{background:var(--veil)}
       li.appendChild(el('span', 'r-name', g.name));
       var meta = el('span', 'r-meta');
       meta.appendChild(el('span', '', g.checkedInAt ? g.list + ' · ' + clock(g.checkedInAt) : g.list));
-      li.appendChild(meta); rows.appendChild(li);
+      if (!g.checkedInAt && ciLock && canWrite && db) {
+        var go = el('button', 'btn ghost small r-act', 'Check in'); go.type = 'button'; go.dataset.code = g.code;
+        go.setAttribute('aria-label', 'Check in ' + g.name);
+        li.className = 'has-act'; li.appendChild(meta); li.appendChild(go);
+      } else li.appendChild(meta);
+      rows.appendChild(li);
     });
     $('begin').hidden = !(loaded && !noData && !list.length && isOwner);
     var empty = $('empty');
@@ -1854,7 +1904,7 @@ dialog.pass::backdrop{background:var(--veil)}
     unlocked = true; setMode('admin'); renderLock(); window.scrollTo(0, 0);
     if (wantTab) { var go = wantTab; wantTab = ''; openSettings(go); }
   }
-  function clearPins(){ ['lock-old', 'lock-new', 'lock-again'].forEach(function(id){ $(id).value = ''; }); }
+  function clearPins(){ ['lock-old', 'lock-new', 'lock-again', 'ci-new', 'ci-again'].forEach(function(id){ $(id).value = ''; }); }
   function leaveManager(){
     // going back to the door locks the manager and its settings again
     unlocked = false; rowState = null; closePass(); clearPins();
@@ -1863,7 +1913,7 @@ dialog.pass::backdrop{background:var(--veil)}
   }
   /* ================= settings: its own page, one tab per section ================= */
   var TABS = {event: ['event-box', 'Event details'], theme: ['theme-box', 'Colours'], people: ['staff-box', 'People'],
-              passcode: ['lock-box', 'Passcode'], list: ['list-box', 'Guest list']};
+              passcode: ['lock-box', 'Passcode'], checkin: ['ci-box', 'Check-in code'], list: ['list-box', 'Guest list']};
   function showTab(name){
     if (!TABS[name]) name = 'event';
     sTab = name;
@@ -1885,8 +1935,8 @@ dialog.pass::backdrop{background:var(--veil)}
   // openSettings() opens the first tab, openSettings('people') a named one, openSettings(true) the passcode box
   function openSettings(where){
     if (!unlocked) return;
-    renderLock(); resetStep(false); fillEventForm(); renderSwatches(); renderStaff();
-    ['lock-msg', 'reset-msg', 'event-msg', 'theme-msg', 'staff-msg'].forEach(function(id){ say(id, ''); });
+    renderLock(); renderCi(); resetStep(false); fillEventForm(); renderSwatches(); renderStaff();
+    ['lock-msg', 'ci-msg', 'reset-msg', 'event-msg', 'theme-msg', 'staff-msg'].forEach(function(id){ say(id, ''); });
     var tab = where === true ? 'passcode' : (typeof where === 'string' && TABS[where] ? where : 'event');
     sTab = tab; setMode('settings'); showTab(tab);
     window.scrollTo(0, 0);
@@ -1911,7 +1961,7 @@ dialog.pass::backdrop{background:var(--veil)}
   $('crumb-door').addEventListener('click', leaveManager);
   $('crumb-settings').addEventListener('click', function(){ showTab('event'); window.scrollTo(0, 0); });
 
-  ['lock-old', 'lock-new', 'lock-again', 'gate-pin'].forEach(function(id){
+  ['lock-old', 'lock-new', 'lock-again', 'gate-pin', 'ci-new', 'ci-again', 'ci-pin'].forEach(function(id){
     $(id).addEventListener('input', function(e){ var d = e.target.value.replace(/[^0-9]/g, '').slice(0, 6); if (d !== e.target.value) e.target.value = d; });
   });
   $('open-settings').addEventListener('click', function(){ openSettings('event'); });
@@ -1948,6 +1998,79 @@ dialog.pass::backdrop{background:var(--veil)}
       say('lock-msg', 'Could not save the passcode. Check the signal and try again.', 'bad');
     }
     $('lock-go').disabled = false;
+  });
+
+  /* ================= the check-in code: checking a guest in from the list, without a pass ================= */
+  // Like the Manage guests passcode, only a salted fingerprint is saved (settings/checkin), and it is checked on this phone.
+  // It is a lock on the page: the database lets any invited helper check a guest in, with or without it.
+  var ciLock = null, ciFor = null, ciWrong = 0, ciUntil = 0;
+  function useCiLock(d){ ciLock = d && d.salt && d.hash ? {salt: String(d.salt), hash: String(d.hash), rounds: Number(d.rounds) || ROUNDS} : null; }
+  function ciWait(){ return Math.max(0, Math.ceil((ciUntil - Date.now()) / 1000)); }
+  function renderCi(){
+    $('ci-go').textContent = ciLock ? 'Change check-in code' : 'Set check-in code';
+    $('ci-state').textContent = ciLock
+      ? 'Helpers can check a guest in from the Still to come list, for a guest who arrives without their pass. They are asked for this 6-digit code each time.'
+      : 'No check-in code yet. Set one to put a Check in button beside each name under Still to come, for a guest who arrives without their pass. Helpers are asked for the code each time.';
+  }
+  $('ci-form').addEventListener('submit', async function(e){
+    e.preventDefault();
+    if (!db || !isOwner) return;
+    var pin = $('ci-new').value.trim(), again = $('ci-again').value.trim(), had = !!ciLock;
+    if (!/^[0-9]{6}$/.test(pin)) { say('ci-msg', 'Choose a check-in code of exactly 6 digits.', 'bad'); return; }
+    if (pin !== again) { say('ci-msg', 'The two check-in codes do not match.', 'bad'); return; }
+    $('ci-go').disabled = true;
+    try {
+      var salt = new Uint8Array(16); crypto.getRandomValues(salt);
+      var rec = {salt: hex(salt), hash: await fingerprint(pin, hex(salt), ROUNDS), rounds: ROUNDS, setAt: Date.now()};
+      await db.doc('settings/checkin').set(rec);
+      useCiLock(rec);
+      $('ci-new').value = ''; $('ci-again').value = '';
+      renderCi(); renderDoor();
+      say('ci-msg', had ? 'Check-in code changed. The old code no longer works.' : 'Check-in code saved. Still to come now has a Check in button beside each name.', 'good');
+    } catch (err) {
+      say('ci-msg', 'Could not save the check-in code. Check the signal and try again.', 'bad');
+    }
+    $('ci-go').disabled = false;
+  });
+  function openCi(g){
+    ciFor = g.code;
+    $('ci-title').textContent = g.name; $('ci-list').textContent = g.list; $('ci-pin').value = '';
+    say('ci-gate-msg', ciWait() ? 'Too many wrong tries. Wait ' + ciWait() + ' seconds.' : '', ciWait() ? 'bad' : '');
+    var dlg = $('ci-gate');
+    if (!dlg.open) { if (dlg.showModal) { try { dlg.showModal(); } catch (e) { dlg.setAttribute('open', ''); } } else dlg.setAttribute('open', ''); }
+    $('ci-pin').focus();
+  }
+  function closeCi(){ ciFor = null; $('ci-pin').value = ''; var dlg = $('ci-gate'); if (dlg.open) { if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); } }
+  $('ci-gate-cancel').addEventListener('click', closeCi);
+  $('rows').addEventListener('click', function(e){
+    var b = e.target.closest ? e.target.closest('.r-act') : null;
+    if (!b) return;
+    var g = guests.get(b.dataset.code);
+    if (g && !g.checkedInAt) openCi(g);
+  });
+  $('ci-gate-form').addEventListener('submit', async function(e){
+    e.preventDefault();
+    armSound();
+    var pin = $('ci-pin').value.trim();
+    if (ciWait()) { say('ci-gate-msg', 'Too many wrong tries. Wait ' + ciWait() + ' seconds.', 'bad'); return; }
+    if (!/^[0-9]{6}$/.test(pin)) { say('ci-gate-msg', 'The check-in code is 6 digits.', 'bad'); return; }
+    $('ci-gate-go').disabled = true;
+    var ok = false;
+    try { ok = !!ciLock && (await fingerprint(pin, ciLock.salt, ciLock.rounds)) === ciLock.hash; } catch (err) {}
+    $('ci-gate-go').disabled = false;
+    if (!ok) {
+      ciWrong += 1; $('ci-pin').value = '';
+      if (ciWrong >= 5) {
+        ciWrong = 0; ciUntil = Date.now() + 60000;
+        try { localStorage.setItem('ci-wait', String(ciUntil)); } catch (err) {}
+        say('ci-gate-msg', 'Too many wrong tries. Wait 60 seconds.', 'bad');
+      } else say('ci-gate-msg', 'Wrong check-in code. ' + (5 - ciWrong) + (5 - ciWrong === 1 ? ' try' : ' tries') + ' left.', 'bad');
+      return;
+    }
+    var code = ciFor;
+    ciWrong = 0; closeCi();
+    window.scrollTo(0, 0);   // the result shows at the top, where a scanned pass's would
+    if (code) checkIn(code);
   });
 
   /* ================= connect to the shared guest list ================= */
@@ -1989,6 +2112,11 @@ dialog.pass::backdrop{background:var(--veil)}
     }
     $('switch').hidden = !isOwner;   // door helpers only scan
     try { lockedUntil = Number(localStorage.getItem('gate-wait')) || 0; } catch (e) {}
+    try { ciUntil = Number(localStorage.getItem('ci-wait')) || 0; } catch (e) {}
+    db.doc('settings/checkin').onSnapshot(function(snap){
+      useCiLock(snap.exists ? snap.data() : null);
+      renderDoor(); if (mode === 'settings') renderCi();
+    }, function(){});
     renderSwatches();
     db.doc('settings/event').onSnapshot(function(snap){
       eventSaved = !!snap.exists;
