@@ -5,7 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#6B1626">
-<title>Guest check-in</title>
+<title>Adeola &amp; Joshua&#8217;s Wedding · Welcome Desk</title>
+<meta name="description" content="Thank you for helping us welcome our guests on 26 November. Sign in to start scanning passes.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://joshbog.github.io/guest_checkin/">
+<meta property="og:title" content="Adeola &amp; Joshua&#8217;s Wedding · Welcome Desk">
+<meta property="og:description" content="Thank you for helping us welcome our guests on 26 November. Sign in to start scanning passes.">
 <link rel="icon" href="favicon.png" type="image/png" sizes="48x48">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -704,7 +709,6 @@ dialog.pass::backdrop{background:var(--veil)}
   function applyEvent(){
     $('mast-type').textContent = cfg.type;
     $('when').textContent = whenLine();
-    document.title = cfg.name1 ? coupleLine('&') + ' check-in' : 'Guest check-in';
     var art = originalCrest(), label = coupleLine('and') + (crestDate(cfg.date) ? ', ' + longDate(cfg.date) : '');
     $('crest-img').hidden = !cfg.name1; $('crest-img').alt = cfg.name1 ? 'Monogram: ' + label : '';
     if (cfg.name1) paintCrest();
