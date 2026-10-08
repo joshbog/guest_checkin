@@ -195,7 +195,7 @@ button,input,select{font:inherit;color:inherit}
 .tabs button{flex:1 1 0;min-width:0;padding:13px 8px;background:transparent;border:0;border-radius:0;cursor:pointer;
   font:500 .78rem/1.3 var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
 .tabs button[aria-selected="true"]{background:var(--tab-on);color:var(--accent)}
-.tabs b,.chip b{font-weight:500;font-variant-numeric:tabular-nums;margin-left:.4em}
+.tabs b{font-weight:500;font-variant-numeric:tabular-nums;margin-left:.4em}
 .rows li{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 16px;padding-block:13px;border-bottom:1px solid var(--line)}
 .r-name{font:400 1.18rem/1.25 var(--display);min-width:0;overflow-wrap:anywhere}
 .r-meta{display:flex;align-items:baseline;gap:12px;font-size:.92rem;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -217,16 +217,15 @@ button,input,select{font:inherit;color:inherit}
 .add-choice b{font:500 .78rem/1.2 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
 .add-choice span{font-size:.92rem;color:var(--muted)}
 .add-choice:hover,.add-choice:focus-visible{background:var(--tab-on);outline:none}
-.tools{display:grid;gap:12px}
+.tools{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;display:grid;gap:12px;padding-block:10px;
+  background:var(--paper);border-bottom:1px solid var(--line)}   /* the search and filters stay in reach down a long list */
+.tools.still{position:static}   /* while selecting, the selection bar takes the top instead */
 .find-row{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:8px}   /* search, then the guest type */
-@media (max-width:560px){.tools .find-row{grid-template-columns:1fr}}   /* the longer guest-list search keeps its whole line on a phone */
+.tools .find-row{grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr)}
+@media (max-width:560px){.tools .find-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.tools .find-row #q{grid-column:1/-1}}   /* on a phone the search has its own line, the two filters share the next */
 .find-row select{width:100%;min-width:0}
 .types li{align-items:center}
 .types .s-meta{align-items:baseline}
-.chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{padding:12px 12px;border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:0;cursor:pointer;
-  font:500 .72rem/1 var(--body);letter-spacing:.14em;text-transform:uppercase}
-.chip[aria-pressed="true"]{background:var(--tab-on)}   /* quiet, so solid burgundy stays with Add guests */
 .add{display:grid;gap:12px;justify-items:start}
 .add:not(:has(form:not([hidden]))):not(:has(.msg:not(:empty))){display:none}   /* no empty gap while the form is closed */
 .add form{display:grid;gap:12px;width:100%;padding:16px;border:1px solid var(--line);background:var(--banner)}
@@ -533,11 +532,8 @@ dialog.pass::backdrop{background:var(--veil)}
       <input class="text-in" id="q" type="search" placeholder="Find a guest by name or entry code" autocomplete="off" autocorrect="off" spellcheck="false">
       <label class="sr" for="q-type">Show guest type</label>
       <select class="text-in" id="q-type" data-types="filter"><option value="">All types</option></select>
-    </div>
-    <div class="chips" role="group" aria-label="Show">
-      <button type="button" class="chip" id="f-all" data-f="all" aria-pressed="true">All<b id="c-all">0</b></button>
-      <button type="button" class="chip" id="f-in" data-f="in" aria-pressed="false">Arrived<b id="c-in">0</b></button>
-      <button type="button" class="chip" id="f-out" data-f="out" aria-pressed="false">Not arrived<b id="c-out">0</b></button>
+      <label class="sr" for="q-status">Show arrived or still to come</label>
+      <select class="text-in" id="q-status"><option value="all" id="c-all">Everyone (0)</option><option value="in" id="c-in">Arrived (0)</option><option value="out" id="c-out">To come (0)</option></select>
     </div>
   </section>
 
@@ -1604,7 +1600,8 @@ dialog.pass::backdrop{background:var(--veil)}
     var list = all().sort(function(a, b){ return a.no - b.no; });
     var ofType = qType ? list.filter(function(g){ return g.list === qType; }) : list;   // the counts follow the type shown
     var nIn = ofType.filter(function(g){ return g.checkedInAt; }).length;
-    $('c-all').textContent = ofType.length; $('c-in').textContent = nIn; $('c-out').textContent = ofType.length - nIn;
+    $('c-all').textContent = 'Everyone (' + ofType.length + ')'; $('c-in').textContent = 'Arrived (' + nIn + ')'; $('c-out').textContent = 'To come (' + (ofType.length - nIn) + ')';
+    $('tools').classList.toggle('still', picking);
     if (rowState && !guests.has(rowState.code)) rowState = null;
 
     // keep the cursor where it was if the list refreshes while a name is being edited
@@ -1747,13 +1744,7 @@ dialog.pass::backdrop{background:var(--veil)}
 
   $('q').addEventListener('input', function(e){ q = e.target.value; renderAdmin(); });
   $('q-type').addEventListener('change', function(e){ qType = e.target.value; renderAdmin(); });
-  ['f-all', 'f-in', 'f-out'].forEach(function(id){
-    $(id).addEventListener('click', function(){
-      filt = $(id).dataset.f;
-      ['f-all', 'f-in', 'f-out'].forEach(function(o){ $(o).setAttribute('aria-pressed', String(o === id)); });
-      renderAdmin();
-    });
-  });
+  $('q-status').addEventListener('change', function(e){ filt = e.target.value; renderAdmin(); });
   $('m-rows').addEventListener('input', function(e){
     if (!rowState) return;
     if (e.target.id === 'edit-name') rowState.name = e.target.value;
