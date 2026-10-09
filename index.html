@@ -239,7 +239,16 @@ select.text-in::-ms-expand{display:none}
 .typed{display:grid;gap:8px}
 .typed .text-in{flex:1 1 11rem;width:auto;font-weight:500;font-size:1.1rem;letter-spacing:.18em;text-transform:uppercase}
 
-.ledger{display:grid;gap:0;margin-top:48px}   /* clear space between the check-in tools and the list, the same on a phone */
+.ledger{display:grid;gap:0}
+.ledger .note{margin:0 0 14px}
+/* the door's guest list card: arrived of total, and the way to the full list */
+.count-card{display:grid;grid-template-columns:1fr auto;align-items:center;gap:14px 20px;margin-top:28px;padding:20px;background:var(--banner);border:1px solid var(--line)}
+.cc-text{display:grid;gap:6px}
+.cc-num{font-size:1.05rem;color:var(--muted)}
+.cc-num b{font:400 2rem/1 var(--display);color:var(--ink);margin-right:.15em}
+.cc-bar{grid-column:1 / -1;grid-row:2}
+.count-card .btn{grid-column:2;grid-row:1}
+@media (max-width:480px){.count-card{grid-template-columns:1fr}.count-card .btn{grid-column:1;grid-row:3;justify-self:stretch}}
 .ledger-title{font:400 clamp(1.6rem,5.4vw,2.1rem)/1.1 var(--display);margin-bottom:18px;text-wrap:balance}
 .ledger-bar{position:sticky;top:var(--bar-h);z-index:10;display:grid;gap:10px;padding-bottom:10px;
   background:var(--paper);border-bottom:1px solid var(--line)}   /* the tabs and the search stay in reach down a long list */
@@ -443,6 +452,7 @@ dialog.pass::backdrop{background:var(--veil)}
           <p class="menu-who menu-anim" id="who" hidden><span class="menu-label">Signed in as</span><span id="who-email"></span></p>
           <div class="menu-links">
             <button class="menu-item menu-anim" type="button" id="nav-door" aria-current="page" hidden>Door check-in</button>
+            <button class="menu-item menu-anim" type="button" id="nav-list" hidden>Guest list</button>
             <button class="menu-item menu-anim" type="button" id="nav-admin" hidden>Manage guests</button>
             <button class="menu-item menu-anim" type="button" id="nav-settings" hidden>Settings</button>
           </div>
@@ -509,8 +519,23 @@ dialog.pass::backdrop{background:var(--veil)}
     <button class="btn small" type="button" id="begin-go">Get started</button>
   </div>
 
-  <section class="ledger" id="ledger" aria-labelledby="ledger-title">
-    <h2 class="ledger-title" id="ledger-title">Guest list</h2>
+  <section class="count-card" id="count-card" aria-labelledby="cc-label" hidden>
+    <div class="cc-text">
+      <p class="imp-label" id="cc-label">Guest list</p>
+      <p class="cc-num"><b id="cc-in">0</b> of <span id="cc-all">0</span> arrived</p>
+    </div>
+    <div class="imp-bar cc-bar" role="progressbar" aria-labelledby="cc-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="cc-bar"><span id="cc-fill"></span></div>
+    <button class="btn ghost" type="button" id="cc-go">View guest list</button>
+  </section>
+</main>
+
+<!-- ================= the guest list: who is still to come and who has arrived ================= -->
+<main class="wrap desk" id="list-page" hidden>
+  <section class="ledger" id="ledger" aria-label="Guest list">
+    <div class="note" id="l-note" hidden>
+      <p class="msg" id="l-msg" role="status"></p>
+      <button class="icon-btn note-x" type="button" id="l-msg-x" aria-label="Clear this message"><svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false"><path d="M4 4 16 16M16 4 4 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></button>
+    </div>
     <div class="ledger-bar" id="ledger-bar">
       <div class="tabs" role="tablist">
         <button type="button" id="tab-out" role="tab" aria-selected="true" aria-controls="rows">Guests<b id="n-out">0</b></button>
@@ -1332,7 +1357,7 @@ dialog.pass::backdrop{background:var(--veil)}
   });
   /* ================= the header menu ================= */
   // The menu button shows only when the menu has something in it, so a signed-out phone sees none.
-  function menuHasItems(){ return ['who', 'nav-door', 'nav-admin', 'nav-settings', 'signout'].some(function(id){ return !$(id).hidden; }); }
+  function menuHasItems(){ return ['who', 'nav-door', 'nav-list', 'nav-admin', 'nav-settings', 'signout'].some(function(id){ return !$(id).hidden; }); }
   function calm(){ try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } }
   function openMenu(){
     var p = $('menu-panel');
@@ -1456,13 +1481,14 @@ dialog.pass::backdrop{background:var(--veil)}
   }
   function tidy(name){ return String(name || '').replace(/\s+/g, ' ').trim().slice(0, 60); }
   function el(tag, cls, text){ var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
-  var noteTimer = 0;
+  var noteTimers = {};
   function say(id, text, tone){
     var n = $(id); n.textContent = text || ''; n.className = 'msg' + (tone ? ' ' + tone : '');
-    if (id !== 'm-msg') return;
-    // the guest list's message: a success clears itself after 3 seconds; anything can be cleared with the cross
-    $('m-note').hidden = !text; clearTimeout(noteTimer);
-    if (text && tone === 'good') noteTimer = setTimeout(function(){ if ($('m-msg').textContent === text) say('m-msg', ''); }, 3000);
+    var box = {'m-msg': 'm-note', 'l-msg': 'l-note'}[id];
+    if (!box) return;
+    // a message on a guest list: a success clears itself after 3 seconds; anything can be cleared with the cross
+    $(box).hidden = !text; clearTimeout(noteTimers[id]);
+    if (text && tone === 'good') noteTimers[id] = setTimeout(function(){ if ($(id).textContent === text) say(id, ''); }, 3000);
   }
   function all(){ return Array.from(guests.values()); }
 
@@ -1548,10 +1574,10 @@ dialog.pass::backdrop{background:var(--veil)}
     busy = true;
     show('busy', 'Checking', code, 'Looking this pass up on the guest list.');
     try {
-      if (!db) { buzz(); show('miss', 'Not signed in', 'Guest list unavailable', 'Sign in with Google to check guests in.'); return; }
-      if (!canWrite) { buzz(); show('miss', 'Not invited', 'This account cannot check guests in', 'Ask an organiser to add this Gmail address in Settings.'); return; }
+      if (!db) { buzz(); show('miss', 'Not signed in', 'Guest list unavailable', 'Sign in with Google to check guests in.'); return {status: 'fail'}; }
+      if (!canWrite) { buzz(); show('miss', 'Not invited', 'This account cannot check guests in', 'Ask an organiser to add this Gmail address in Settings.'); return {status: 'fail'}; }
       // Unknown codes stop here, so a made-up code never touches the guest list.
-      if (loaded && !guests.has(code)) { buzz(); showBad(code); return; }
+      if (loaded && !guests.has(code)) { buzz(); showBad(code); return {status: 'missing'}; }
       // The database admits a pass in one atomic step, so two doors scanning it in the same second cannot both let it in.
       var res = await db.checkIn(code);
       if (res.status === 'missing') { buzz(); showBad(code); }
@@ -1562,9 +1588,11 @@ dialog.pass::backdrop{background:var(--veil)}
         showGuest('ok', res.guest);
       }
       else { buzz(); showGuest('dup', res.guest); }
+      return res;
     } catch (e) {
       buzz();
       show('miss', 'Not saved', 'Could not check this pass', 'The guest list did not answer. Check the signal and scan the pass again.');
+      return {status: 'fail'};
     } finally {
       busy = false;
     }
@@ -1650,8 +1678,8 @@ dialog.pass::backdrop{background:var(--veil)}
     var list = all(), inside = list.filter(function(g){ return g.checkedInAt; }).length;
     var tally = $('tally'); tally.textContent = '';
     var out = loaded && noData && !noAccess;   // nobody is signed in: no count and no arrivals list to show
-    tally.hidden = out; $('ledger').hidden = out;
-    $('carpet').hidden = out && !$('when').textContent;   // the band stays only if it has the event line to show
+    tally.hidden = out || mode === 'door'; $('ledger').hidden = out;   // on the check-in page the strip is the date and time only; the card below has the count
+    $('carpet').hidden = (out || mode === 'door') && !$('when').textContent;   // the band stays only if it has something to show
     if (out) return;
     if (!loaded) tally.appendChild(el('i', '', 'Opening the guest list'));
     else if (noData) tally.appendChild(el('i', '', 'This account is not invited'));
@@ -1662,7 +1690,19 @@ dialog.pass::backdrop{background:var(--veil)}
     }
   }
 
-  /* ================= the door: ledger ================= */
+  /* ================= the door: the guest list card ================= */
+  function renderCount(){
+    var list = all(), inside = list.filter(function(g){ return g.checkedInAt; }).length;
+    var show = loaded && !noData && list.length > 0;
+    $('count-card').hidden = !show;
+    $('begin').hidden = !(loaded && !noData && !list.length && isOwner);
+    if (!show) return;
+    var pct = Math.round(inside * 100 / list.length);
+    $('cc-in').textContent = inside; $('cc-all').textContent = list.length;
+    $('cc-fill').style.width = pct + '%'; $('cc-bar').setAttribute('aria-valuenow', String(pct));
+  }
+
+  /* ================= the guest list page ================= */
   function renderDoor(){
     var everyone = all(), list = findType ? everyone.filter(function(g){ return g.list === findType; }) : everyone;   // the tabs count the type shown
     var inside = list.filter(function(g){ return g.checkedInAt; }).sort(function(a, b){ return b.checkedInAt - a.checkedInAt; });
@@ -1692,7 +1732,6 @@ dialog.pass::backdrop{background:var(--veil)}
       }
       rows.appendChild(li);
     });
-    $('begin').hidden = !(loaded && !noData && !everyone.length && isOwner);
     var empty = $('empty');
     empty.hidden = shown.length > 0;
     empty.textContent = !loaded ? 'Opening the guest list.'
@@ -1924,6 +1963,7 @@ dialog.pass::backdrop{background:var(--veil)}
   });
 
   $('m-msg-x').addEventListener('click', function(){ say('m-msg', ''); });
+  $('l-msg-x').addEventListener('click', function(){ say('l-msg', ''); });
   function adminPlace(){ keepPlace('tools', 'm-rows', renderAdmin); }
   $('q').addEventListener('input', function(e){ q = e.target.value; adminPlace(); });
   $('q-type').addEventListener('change', function(e){ qType = e.target.value; adminPlace(); });
@@ -2598,33 +2638,41 @@ dialog.pass::backdrop{background:var(--veil)}
   });
 
   /* ================= switching between the door and the guest list ================= */
-  function render(){ syncMini(); fillTypes(); renderTally(); if (mode === 'admin') renderAdmin(); else if (mode === 'door') renderDoor(); else if (mode === 'settings' && sTab === 'types') renderTypes(); }
+  function render(){ syncMini(); fillTypes(); renderTally(); if (mode === 'admin') renderAdmin(); else if (mode === 'list') renderDoor(); else if (mode === 'door') renderCount(); else if (mode === 'settings' && sTab === 'types') renderTypes(); }
   function setMode(m){
-    mode = (m === 'admin' || m === 'settings') && unlocked ? m : 'door';
+    mode = (m === 'admin' || m === 'settings') && unlocked ? m : m === 'list' && canList() ? 'list' : 'door';
     if (mode !== 'door') stopCamera();
-    $('door').hidden = mode !== 'door'; $('admin').hidden = mode !== 'admin'; $('settings').hidden = mode !== 'settings';
-    $('page-title').textContent = mode === 'admin' ? 'Guest list' : mode === 'settings' ? 'Settings' : 'Guest check-in';
-    // organisers always see the same three places, in the same order; the one you are on is marked
-    [['nav-door', 'door'], ['nav-admin', 'admin'], ['nav-settings', 'settings']].forEach(function(n){
+    $('door').hidden = mode !== 'door'; $('list-page').hidden = mode !== 'list'; $('admin').hidden = mode !== 'admin'; $('settings').hidden = mode !== 'settings';
+    $('page-title').textContent = mode === 'admin' ? 'Manage guests' : mode === 'settings' ? 'Settings' : mode === 'list' ? 'Guest list' : 'Guest check-in';
+    // the menu always shows the same places, in the same order; the one you are on is marked
+    [['nav-door', 'door'], ['nav-list', 'list'], ['nav-admin', 'admin'], ['nav-settings', 'settings']].forEach(function(n){
       if (mode === n[1]) $(n[0]).setAttribute('aria-current', 'page'); else $(n[0]).removeAttribute('aria-current');
     });
     document.body.classList.toggle('on-settings', mode === 'settings');
     // the address keeps track of where you are, so a reload comes back to the same place (after the passcode)
-    try { history.replaceState(null, '', mode === 'door' ? location.pathname + location.search : mode === 'admin' ? '#admin' : '#settings-' + sTab); } catch (e) {}
+    try { history.replaceState(null, '', mode === 'door' ? location.pathname + location.search : mode === 'list' ? '#list' : mode === 'admin' ? '#admin' : '#settings-' + sTab); } catch (e) {}
     render();
   }
+  function canList(){ return !!db && !noData && (isOwner || canWrite); }
+  // the guest list page is for everyone at the door; leaving Manage guests for it locks the manager again
+  function goList(){
+    if (mode === 'admin' || mode === 'settings') leaveManager();
+    setMode('list'); window.scrollTo(0, 0);
+  }
   $('nav-door').addEventListener('click', function(){ if (mode !== 'door') leaveManager(); });
+  $('nav-list').addEventListener('click', function(){ if (mode !== 'list') goList(); });
+  $('cc-go').addEventListener('click', goList);
   $('home').addEventListener('click', function(e){
     e.preventDefault();
     if (mode !== 'door') leaveManager(); else window.scrollTo(0, 0);
   });
   $('nav-admin').addEventListener('click', function(){
     if (mode === 'settings') closeSettings();
-    else if (mode === 'door') { wantTab = ''; askForManager(); }
+    else if (mode === 'door' || mode === 'list') { wantTab = ''; askForManager(); }
   });
   $('nav-settings').addEventListener('click', function(){
     if (mode === 'admin') openSettings('event');
-    else if (mode === 'door') { wantTab = 'event'; askForManager(); }   // after the passcode, straight to Settings
+    else if (mode === 'door' || mode === 'list') { wantTab = 'event'; askForManager(); }   // after the passcode, straight to Settings
   });
 
   /* ================= the passcode on Manage guests ================= */
@@ -2898,10 +2946,15 @@ dialog.pass::backdrop{background:var(--veil)}
       } else say('ci-gate-msg', 'Wrong check-in code. ' + (5 - ciWrong) + (5 - ciWrong === 1 ? ' try' : ' tries') + ' left.', 'bad');
       return;
     }
-    var code = ciFor;
+    var code = ciFor, who = guests.get(code);
     ciWrong = 0; closeCi();
-    window.scrollTo(0, 0);   // the result shows at the top, where a scanned pass's would
-    if (code) checkIn(code);
+    if (!code) return;
+    if (mode !== 'list') { window.scrollTo(0, 0); checkIn(code); return; }   // the result shows at the top, where a scanned pass's would
+    // on the guest list page the result shows above the list, and you stay where you are
+    var r = await checkIn(code), g = (r && r.guest) || who || {name: code};
+    if (r.status === 'ok') say('l-msg', g.name + ' is checked in' + (g.list ? ' (' + g.list + ')' : '') + '. Welcome them in.', 'good');
+    else if (r.status === 'dup') say('l-msg', g.name + ' was already checked in' + (g.checkedInAt ? ' at ' + clock(g.checkedInAt) + byLine(g) : '') + '.', 'bad');
+    else say('l-msg', 'Could not check ' + g.name + ' in. Check the signal and try again.', 'bad');
   });
 
   /* ================= connect to the shared guest list ================= */
@@ -2941,7 +2994,8 @@ dialog.pass::backdrop{background:var(--veil)}
       notice(myEmail + ' has not been invited to this guest list. Ask an organiser to add this Gmail address in Settings, then reload.');
       return;
     }
-    ['nav-door', 'nav-admin', 'nav-settings'].forEach(function(id){ $(id).hidden = !isOwner; });   // door helpers only scan
+    ['nav-admin', 'nav-settings'].forEach(function(id){ $(id).hidden = !isOwner; });   // door helpers scan and use the guest list
+    $('nav-door').hidden = false; $('nav-list').hidden = false;
     try { lockedUntil = Number(localStorage.getItem('gate-wait')) || 0; } catch (e) {}
     try { ciUntil = Number(localStorage.getItem('ci-wait')) || 0; } catch (e) {}
     db.doc('settings/checkin').onSnapshot(function(snap){
@@ -2966,6 +3020,7 @@ dialog.pass::backdrop{background:var(--veil)}
     }, function(){});
     var deep = /^#settings-([a-z]+)$/.exec(location.hash);
     if (isOwner && (location.hash === '#admin' || deep)) { wantTab = deep ? deep[1] : ''; askForManager(); }
+    else if (location.hash === '#list') setMode('list');
     db.collection('guests').onSnapshot(function(snap){
       guests.clear();
       snap.docs.forEach(function(d){
