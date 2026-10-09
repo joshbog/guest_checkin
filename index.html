@@ -1704,13 +1704,25 @@ dialog.pass::backdrop{background:var(--veil)}
       : findType ? (view === 'in' ? 'No one under ' + findType + ' has arrived yet.' : 'Everyone under ' + findType + ' has arrived.')
       : view === 'in' ? 'Guests appear here as they are checked in.' : 'Everyone on the list has arrived.';
   }
-  $('find').addEventListener('input', function(e){ find = e.target.value; renderDoor(); });
-  $('find-type').addEventListener('change', function(e){ findType = e.target.value; renderDoor(); });
+  // Searching or filtering while the search bar is held at the top: the list keeps at least a screen of height,
+  // so the page does not shrink under you, and the bar stays where it is with the results starting just below it.
+  function keepPlace(barId, listId, draw){
+    var bar = $(barId), list = $(listId), barH = parseFloat(getComputedStyle(bar).top) || 0;
+    bar.style.position = 'static'; var natural = bar.getBoundingClientRect().top + window.scrollY; bar.style.position = '';
+    var stuck = natural - window.scrollY <= barH + 0.5;   // scrolled to or past where the bar would sit, so it is being held at the top
+    if (!stuck) { list.style.minHeight = ''; draw(); return; }
+    list.style.minHeight = window.innerHeight + 'px';
+    draw();
+    window.scrollTo(0, natural - barH);
+  }
+  function doorPlace(){ keepPlace('ledger-bar', 'rows', renderDoor); }
+  $('find').addEventListener('input', function(e){ find = e.target.value; doorPlace(); });
+  $('find-type').addEventListener('change', function(e){ findType = e.target.value; doorPlace(); });
   function setView(v){
     view = v;
     $('tab-in').setAttribute('aria-selected', String(v === 'in'));
     $('tab-out').setAttribute('aria-selected', String(v === 'out'));
-    renderDoor();
+    doorPlace();
   }
   $('tab-in').addEventListener('click', function(){ setView('in'); });
   $('tab-out').addEventListener('click', function(){ setView('out'); });
@@ -1912,9 +1924,10 @@ dialog.pass::backdrop{background:var(--veil)}
   });
 
   $('m-msg-x').addEventListener('click', function(){ say('m-msg', ''); });
-  $('q').addEventListener('input', function(e){ q = e.target.value; renderAdmin(); });
-  $('q-type').addEventListener('change', function(e){ qType = e.target.value; renderAdmin(); });
-  $('q-status').addEventListener('change', function(e){ filt = e.target.value; renderAdmin(); });
+  function adminPlace(){ keepPlace('tools', 'm-rows', renderAdmin); }
+  $('q').addEventListener('input', function(e){ q = e.target.value; adminPlace(); });
+  $('q-type').addEventListener('change', function(e){ qType = e.target.value; adminPlace(); });
+  $('q-status').addEventListener('change', function(e){ filt = e.target.value; adminPlace(); });
   $('m-rows').addEventListener('input', function(e){
     if (!rowState) return;
     if (e.target.id === 'edit-name') rowState.name = e.target.value;
