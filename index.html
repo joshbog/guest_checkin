@@ -73,6 +73,9 @@ button,input,select{font:inherit;color:inherit}
 /* ---------- masthead ---------- */
 .mast{background:var(--paper-2)}
 .mast-in{display:flex;flex-wrap:wrap;align-items:center;gap:12px clamp(14px,4vw,24px);padding-block:18px}
+.home{display:block;flex:none;line-height:0;border-radius:50%}   /* the logo goes back to the door */
+.home:has(> .crest[hidden]){display:none}
+.home:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
 .crest{width:clamp(72px,20vw,104px);height:auto;color:var(--accent);flex:none;display:block}
 .mast-text{display:grid;gap:6px;min-width:0;flex:1 1 9rem}
 .mast h1{font:400 clamp(1.6rem,6.4vw,2.3rem)/1.08 var(--display);text-wrap:balance}
@@ -393,7 +396,7 @@ dialog.pass::backdrop{background:var(--veil)}
 
 <header class="mast">
   <div class="wrap mast-in">
-    <img class="crest" id="crest-img" alt="" width="510" height="490" hidden>
+    <a class="home" id="home" href="./" aria-label="Back to door check-in"><img class="crest" id="crest-img" alt="" width="510" height="490" hidden></a>
     <div class="mast-text">
       <p class="eyebrow" id="mast-type">Event</p>
       <h1 id="page-title">Guest check-in</h1>
@@ -2534,6 +2537,10 @@ dialog.pass::backdrop{background:var(--veil)}
     render();
   }
   $('nav-door').addEventListener('click', function(){ if (mode !== 'door') leaveManager(); });
+  $('home').addEventListener('click', function(e){
+    e.preventDefault();
+    if (mode !== 'door') leaveManager(); else window.scrollTo(0, 0);
+  });
   $('nav-admin').addEventListener('click', function(){
     if (mode === 'settings') closeSettings();
     else if (mode === 'door') { wantTab = ''; askForManager(); }
