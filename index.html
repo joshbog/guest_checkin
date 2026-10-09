@@ -325,18 +325,39 @@ select.text-in::-ms-expand{display:none}
 .m-form{grid-column:1 / -1;display:grid;gap:10px;padding:14px;border:1px solid var(--line);background:var(--banner)}
 .m-form p{color:var(--ink)}
 /* ---------- settings: a page with a sticky tab bar ---------- */
-.s-wrap{max-width:1040px}
-.on-settings .mast .wrap,.on-settings .carpet .wrap{max-width:1040px}   /* the header lines up with the wider settings page */
-.s-bar{position:sticky;top:var(--bar-h);z-index:15;background:var(--paper);border-bottom:1px solid var(--line)}
-.s-bar .s-wrap{display:grid;padding-top:6px}
-.s-tabs{display:flex;gap:clamp(20px,3.6vw,36px);overflow-x:auto;scrollbar-width:none;
-  margin-inline:calc(var(--gutter) * -1);padding-inline:var(--gutter)}
-.s-tabs::-webkit-scrollbar{display:none}
-.s-tabs button{flex:none;padding:12px 0 11px;background:none;border:0;border-bottom:2px solid transparent;border-radius:0;cursor:pointer;
-  font:500 1rem/1.2 var(--body);color:var(--muted);white-space:nowrap}
-.s-tabs button:hover{color:var(--ink)}
-.s-tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
-.s-tabs button:focus-visible{outline-offset:-2px}
+.s-wrap{max-width:1200px}
+.on-settings .mast .wrap,.on-settings .carpet .wrap,.on-settings .mini .wrap{max-width:1200px}   /* the header lines up with the wider settings page */
+/* Settings: a side menu on a wide screen; on a phone, a menu page first, then one section at a time */
+.s-layout{display:grid;gap:clamp(28px,5vw,56px);align-items:start}
+.s-side{display:grid;gap:14px;min-width:0}
+.s-side-title{font:400 clamp(1.9rem,6vw,2.5rem)/1.08 var(--display)}
+.s-menu{display:grid;margin:0;padding:0;list-style:none;border-top:1px solid var(--line)}
+.s-item{display:grid;gap:3px;width:100%;padding:16px 36px 16px 0;position:relative;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);border-radius:0;cursor:pointer;color:var(--ink)}
+.s-item::after{content:"";position:absolute;right:6px;top:50%;width:8px;height:8px;border-top:1.5px solid var(--accent);border-right:1.5px solid var(--accent);transform:translateY(-50%) rotate(45deg)}
+.s-item-t{font:400 1.25rem/1.25 var(--display)}
+.s-item-d{font-size:.92rem;line-height:1.4;color:var(--muted)}
+.s-item:hover .s-item-t,.s-item:focus-visible .s-item-t{color:var(--accent)}
+.s-item:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.s-back{display:inline-flex;align-items:center;gap:8px;justify-self:start;margin-bottom:22px;padding:8px 0;background:none;border:0;border-radius:0;cursor:pointer;
+  font:500 .78rem/1 var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+.s-body{min-width:0;display:grid}
+@media (max-width:899px){
+  #settings.s-at-menu .s-body{display:none}
+  #settings:not(.s-at-menu) .s-side{display:none}
+}
+@media (min-width:900px){
+  .s-layout{grid-template-columns:230px minmax(0,1fr)}
+  .s-side{position:sticky;top:calc(var(--bar-h) + 24px)}
+  .s-side-title{font-size:1.6rem}
+  .s-menu{border-top:0;gap:2px}
+  .s-item{padding:10px 14px;border-bottom:0;border-left:2px solid transparent}
+  .s-item::after,.s-item-d{display:none}
+  .s-item-t{font:400 1.05rem/1.3 var(--body);color:var(--muted)}
+  .s-item[aria-current="page"]{background:var(--tab-on);border-left-color:var(--accent)}
+  .s-item[aria-current="page"] .s-item-t{color:var(--ink)}
+  .s-back{display:none}
+}
+
 .s-main{padding-block:clamp(26px,5vw,48px) clamp(56px,10vw,96px)}
 .s-cols{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(32px,6vw,64px);align-items:start}
 .s-panels{min-width:0}
@@ -361,7 +382,7 @@ select.text-in::-ms-expand{display:none}
 .s-preview .hint{color:var(--muted);font-size:.92rem}
 @media (min-width:900px){
   .s-cols.with-preview{grid-template-columns:minmax(0,1fr) 300px}
-  .s-preview{position:sticky;top:calc(var(--bar-h) + 76px)}
+  .s-preview{position:sticky;top:calc(var(--bar-h) + 24px)}
 }
 
 /* ---------- pass preview ---------- */
@@ -726,26 +747,27 @@ dialog.pass::backdrop{background:var(--veil)}
 
 <!-- ================= settings: a page of its own (organisers only) ================= -->
 <div id="settings" hidden>
-  <div class="s-bar" id="s-bar">
-    <div class="wrap s-wrap">
-      <div class="s-tabs" role="tablist" aria-label="Settings sections">
-        <button type="button" role="tab" id="tab-event" data-tab="event" aria-controls="event-box" aria-selected="true">Event details</button>
-        <button type="button" role="tab" id="tab-theme" data-tab="theme" aria-controls="theme-box" aria-selected="false" tabindex="-1">Colours</button>
-        <button type="button" role="tab" id="tab-people" data-tab="people" aria-controls="staff-box" aria-selected="false" tabindex="-1">People</button>
-        <button type="button" role="tab" id="tab-passcode" data-tab="passcode" aria-controls="lock-box" aria-selected="false" tabindex="-1">Passcode</button>
-        <button type="button" role="tab" id="tab-checkin" data-tab="checkin" aria-controls="ci-box" aria-selected="false" tabindex="-1">Check-in code</button>
-        <button type="button" role="tab" id="tab-types" data-tab="types" aria-controls="types-box" aria-selected="false" tabindex="-1">Guest types</button>
-        <button type="button" role="tab" id="tab-wa" data-tab="wa" aria-controls="wa-box" aria-selected="false" tabindex="-1">WhatsApp</button>
-        <button type="button" role="tab" id="tab-list" data-tab="list" aria-controls="list-box" aria-selected="false" tabindex="-1">Guest list</button>
-      </div>
-    </div>
-  </div>
-
   <main class="wrap s-wrap s-main">
+   <div class="s-layout">
+    <nav class="s-side" id="s-side" aria-label="Settings">
+      <h2 class="sr">Settings sections</h2>
+      <ul class="s-menu">
+        <li><button type="button" class="s-item" id="tab-event" data-tab="event" aria-controls="event-box"><span class="s-item-t">Event details</span><span class="s-item-d">Names, date, time and venue</span></button></li>
+        <li><button type="button" class="s-item" id="tab-theme" data-tab="theme" aria-controls="theme-box"><span class="s-item-t">Colours</span><span class="s-item-d">The colours of this site and the passes</span></button></li>
+        <li><button type="button" class="s-item" id="tab-people" data-tab="people" aria-controls="staff-box"><span class="s-item-t">People</span><span class="s-item-d">Who can sign in, and their names</span></button></li>
+        <li><button type="button" class="s-item" id="tab-passcode" data-tab="passcode" aria-controls="lock-box"><span class="s-item-t">Passcode</span><span class="s-item-d">The lock on Manage guests</span></button></li>
+        <li><button type="button" class="s-item" id="tab-checkin" data-tab="checkin" aria-controls="ci-box"><span class="s-item-t">Check-in code</span><span class="s-item-d">For checking guests in from the list</span></button></li>
+        <li><button type="button" class="s-item" id="tab-types" data-tab="types" aria-controls="types-box"><span class="s-item-t">Guest types</span><span class="s-item-d">Groom's guest, Bride's guest, Vendor and your own</span></button></li>
+        <li><button type="button" class="s-item" id="tab-wa" data-tab="wa" aria-controls="wa-box"><span class="s-item-t">WhatsApp</span><span class="s-item-d">The message sent with each pass</span></button></li>
+        <li><button type="button" class="s-item" id="tab-list" data-tab="list" aria-controls="list-box"><span class="s-item-t">Guest list</span><span class="s-item-d">Download, clear check-ins, remove all</span></button></li>
+      </ul>
+    </nav>
+    <div class="s-body" id="s-body">
+    <button class="s-back" type="button" id="s-back"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" focusable="false"><path d="M7.8 2 3.8 6l4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"/></svg>Settings</button>
     <div class="s-cols with-preview" id="s-cols">
       <div class="s-panels">
 
-  <section class="s-panel" id="event-box" role="tabpanel" aria-labelledby="tab-event">
+  <section class="s-panel" id="event-box" role="region" aria-labelledby="tab-event">
     <header class="s-head">
       <h2>Event details</h2>
       <p id="event-state">These show at the top of every page and on every pass.</p>
@@ -784,7 +806,7 @@ dialog.pass::backdrop{background:var(--veil)}
     <p class="msg" id="event-msg" role="status"></p>
   </section>
 
-  <section class="s-panel" id="theme-box" role="tabpanel" aria-labelledby="tab-theme" hidden>
+  <section class="s-panel" id="theme-box" role="region" aria-labelledby="tab-theme" hidden>
     <header class="s-head">
       <h2>Colours</h2>
       <p>One theme colours every page of this site and every pass downloaded from now on. Passes already sent keep working.</p>
@@ -793,7 +815,7 @@ dialog.pass::backdrop{background:var(--veil)}
     <p class="msg" id="theme-msg" role="status"></p>
   </section>
 
-  <section class="s-panel" id="staff-box" role="tabpanel" aria-labelledby="tab-people" hidden>
+  <section class="s-panel" id="staff-box" role="region" aria-labelledby="tab-people" hidden>
     <header class="s-head">
       <h2>People</h2>
       <p>Everyone signs in with their own Google account. A door helper can only scan passes. An organiser can also manage guests and change these settings. Each person's name shows beside the guests they check in.</p>
@@ -820,7 +842,7 @@ dialog.pass::backdrop{background:var(--veil)}
     <p class="msg" id="staff-msg" role="status"></p>
   </section>
 
-  <section class="s-panel" id="lock-box" role="tabpanel" aria-labelledby="tab-passcode" hidden>
+  <section class="s-panel" id="lock-box" role="region" aria-labelledby="tab-passcode" hidden>
     <header class="s-head">
       <h2>Passcode</h2>
       <p id="lock-state">Manage guests opens with a 6-digit passcode.</p>
@@ -863,7 +885,7 @@ dialog.pass::backdrop{background:var(--veil)}
     <p class="msg" id="lock-msg" role="status"></p>
   </section>
 
-  <section class="s-panel" id="ci-box" role="tabpanel" aria-labelledby="tab-checkin" hidden>
+  <section class="s-panel" id="ci-box" role="region" aria-labelledby="tab-checkin" hidden>
     <header class="s-head">
       <h2>Check-in code</h2>
       <p class="hint" id="ci-state">No check-in code yet.</p>
@@ -884,7 +906,7 @@ dialog.pass::backdrop{background:var(--veil)}
     <p class="msg" id="ci-msg" role="status"></p>
   </section>
 
-  <section class="s-panel" id="types-box" role="tabpanel" aria-labelledby="tab-types" hidden>
+  <section class="s-panel" id="types-box" role="region" aria-labelledby="tab-types" hidden>
     <header class="s-head">
       <h2>Guest types</h2>
       <p>Every guest belongs to one type. Pick it when you add a guest, and use it to filter the list at the door and in Manage guests.</p>
@@ -903,7 +925,7 @@ dialog.pass::backdrop{background:var(--veil)}
     <p class="msg" id="type-msg" role="status"></p>
   </section>
 
-  <section class="s-panel" id="wa-box" role="tabpanel" aria-labelledby="tab-wa" hidden>
+  <section class="s-panel" id="wa-box" role="region" aria-labelledby="tab-wa" hidden>
     <header class="s-head">
       <h2>WhatsApp</h2>
       <p>The message that goes with each guest's pass. Write {{Fullname}} where the guest's name should go.</p>
@@ -931,7 +953,7 @@ dialog.pass::backdrop{background:var(--veil)}
     <p class="msg" id="wa-save-msg" role="status"></p>
   </section>
 
-  <section class="s-panel" id="list-box" role="tabpanel" aria-labelledby="tab-list" hidden>
+  <section class="s-panel" id="list-box" role="region" aria-labelledby="tab-list" hidden>
     <header class="s-head">
       <h2>Guest list</h2>
       <p>Tools that work on the whole list at once.</p>
@@ -983,6 +1005,8 @@ dialog.pass::backdrop{background:var(--veil)}
         <p class="hint">The sample updates each time you save.</p>
       </aside>
     </div>
+    </div>
+   </div>
   </main>
 </div>
 
@@ -2887,8 +2911,8 @@ dialog.pass::backdrop{background:var(--veil)}
     else if (mode === 'door' || mode === 'list') { wantTab = ''; askForManager(); }
   });
   $('nav-settings').addEventListener('click', function(){
-    if (mode === 'admin') openSettings('event');
-    else if (mode === 'door' || mode === 'list') { wantTab = 'event'; askForManager(); }   // after the passcode, straight to Settings
+    if (mode === 'admin') openSettings();
+    else if (mode === 'door' || mode === 'list') { wantTab = 'menu'; askForManager(); }   // after the passcode, straight to Settings
   });
 
   /* ================= the passcode on Manage guests ================= */
@@ -2971,21 +2995,29 @@ dialog.pass::backdrop{background:var(--veil)}
   /* ================= settings: its own page, one tab per section ================= */
   var TABS = {event: ['event-box', 'Event details'], theme: ['theme-box', 'Colours'], people: ['staff-box', 'People'],
               passcode: ['lock-box', 'Passcode'], checkin: ['ci-box', 'Check-in code'], types: ['types-box', 'Guest types'], wa: ['wa-box', 'WhatsApp'], list: ['list-box', 'Guest list']};
+  function wideSettings(){ try { return matchMedia('(min-width: 900px)').matches; } catch (e) { return true; } }
+  // On a phone Settings opens on its menu; a section then fills the page, with Settings to go back.
+  function showMenu(){
+    $('settings').classList.add('s-at-menu');
+    if (wideSettings()) { showTab(sTab || 'event'); return; }
+    if (mode === 'settings') { try { history.replaceState(null, '', '#settings'); } catch (e) {} }
+    window.scrollTo(0, 0);
+  }
   function showTab(name){
     if (!TABS[name]) name = 'event';
     sTab = name;
+    $('settings').classList.remove('s-at-menu');
     Object.keys(TABS).forEach(function(k){
       var on = k === name, tab = $('tab-' + k);
       $(TABS[k][0]).hidden = !on;
-      tab.setAttribute('aria-selected', String(on)); tab.tabIndex = on ? 0 : -1;
+      if (on) tab.setAttribute('aria-current', 'page'); else tab.removeAttribute('aria-current');
     });
     var preview = name === 'event' || name === 'theme';
     $('s-preview').hidden = !preview; $('s-cols').classList.toggle('with-preview', preview);
     if (mode === 'settings') { try { history.replaceState(null, '', '#settings-' + name); } catch (e) {} }
-    // keep the chosen tab in view on a narrow screen, and bring the top of the section up under the bar
-    try { var bar = $('tab-' + name).parentNode, tb = $('tab-' + name); bar.scrollLeft = Math.max(0, tb.offsetLeft - bar.offsetLeft - 40); } catch (e) {}
+    // bring the top of the section up under the header
     var top = $('settings').getBoundingClientRect().top + window.scrollY;
-    if (window.scrollY > top) window.scrollTo(0, top);
+    if (window.scrollY > top || !wideSettings()) window.scrollTo(0, wideSettings() ? top : 0);
     if (preview) paintSample();
     if (name === 'types') renderTypes();
     if (name === 'wa') fillWaForm();
@@ -2996,7 +3028,8 @@ dialog.pass::backdrop{background:var(--veil)}
     renderLock(); renderCi(); resetStep(false); wipeStep(false); fillEventForm(); renderSwatches(); renderStaff(); renderTypes();
     ['lock-msg', 'ci-msg', 'reset-msg', 'event-msg', 'theme-msg', 'staff-msg'].forEach(function(id){ say(id, ''); });
     var tab = where === true ? 'passcode' : (typeof where === 'string' && TABS[where] ? where : 'event');
-    sTab = tab; setMode('settings'); showTab(tab);
+    sTab = tab; setMode('settings');
+    if (where === undefined || where === 'menu') showMenu(); else showTab(tab);
     window.scrollTo(0, 0);
     if (where === true && isOwner) { if (!lock) { lockSetting = true; renderLock(); } $(lock ? 'lock-old' : 'lock-new').focus(); }
   }
@@ -3005,17 +3038,11 @@ dialog.pass::backdrop{background:var(--veil)}
     if (mode === 'settings') { setMode('admin'); window.scrollTo(0, 0); }
     if (importOpen) { try { $('import').scrollIntoView({block: 'start'}); } catch (e) {} }
   }
-  $('s-bar').addEventListener('click', function(e){
+  $('s-side').addEventListener('click', function(e){
     var tab = e.target.closest ? e.target.closest('[data-tab]') : null;
     if (tab) showTab(tab.dataset.tab);
   });
-  $('s-bar').addEventListener('keydown', function(e){
-    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-    var tab = e.target.closest ? e.target.closest('[data-tab]') : null; if (!tab) return;
-    var keys = Object.keys(TABS), i = keys.indexOf(tab.dataset.tab) + (e.key === 'ArrowRight' ? 1 : -1);
-    var next = keys[(i + keys.length) % keys.length];
-    e.preventDefault(); showTab(next); $('tab-' + next).focus();
-  });
+  $('s-back').addEventListener('click', showMenu);
 
   ['lock-old', 'lock-new', 'lock-again', 'gate-pin', 'ci-new', 'ci-again', 'ci-pin', 'lock-off-pin'].forEach(function(id){
     $(id).addEventListener('input', function(e){ var d = e.target.value.replace(/[^0-9]/g, '').slice(0, 6); if (d !== e.target.value) e.target.value = d; });
@@ -3246,7 +3273,7 @@ dialog.pass::backdrop{background:var(--veil)}
       renderStaff();
     }, function(){});
     var deep = /^#settings-([a-z]+)$/.exec(location.hash);
-    if (isOwner && (location.hash === '#admin' || deep)) { wantTab = deep ? deep[1] : ''; askForManager(); }
+    if (isOwner && (location.hash === '#admin' || location.hash === '#settings' || deep)) { wantTab = deep ? deep[1] : location.hash === '#settings' ? 'menu' : ''; askForManager(); }
     else if (location.hash === '#list') setMode('list');
     db.collection('guests').onSnapshot(function(snap){
       guests.clear();
