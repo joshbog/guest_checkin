@@ -2610,11 +2610,14 @@ dialog.pass::backdrop{background:var(--veil)}
     if (!saver) { say('import-msg', 'This device cannot save files from here. Use any Excel sheet with a column headed Guest name and a column headed List.', 'bad'); return; }
     try { await loadSheetReader(); } catch (err) { say('import-msg', 'The Excel reader did not load. Check the signal and try again.', 'bad'); return; }
     try {
-      var X = window.XLSX, sheet = X.utils.aoa_to_sheet([['Guest name', 'List']]), book = X.utils.book_new();
-      sheet['!cols'] = [{wch: 36}, {wch: 18}];
+      var X = window.XLSX, sheet = X.utils.aoa_to_sheet([['Guest name', 'List', 'WhatsApp number', 'Country code']]), book = X.utils.book_new();
+      sheet['!cols'] = [{wch: 36}, {wch: 18}, {wch: 22}, {wch: 14}];
+      // the number columns are text, so Excel keeps a leading 0 or + as typed
+      for (var r = 1; r <= 1000; r++) ['C', 'D'].forEach(function(col){ sheet[col + (r + 1)] = {t: 's', v: '', z: '@'}; });
+      sheet['!ref'] = 'A1:D1001';
       X.utils.book_append_sheet(book, sheet, 'Guests');
       await saver.save({filename: 'Guest list template.xlsx', data: new Uint8Array(X.write(book, {bookType: 'xlsx', type: 'array'}))});
-      say('import-msg', 'Template saved. Put one guest on each row, with Groom, Bride or Vendor in the List column, then upload it here.', 'good');
+      say('import-msg', 'Template saved. Put one guest on each row: their name, Groom, Bride or Vendor in the List column, and their WhatsApp number if you have it. For numbers outside ' + (waCfg.cc === '234' ? 'Nigeria' : '+' + waCfg.cc) + ', write + and the country code (+44 7700 900123) or fill in Country code. Then upload it here.', 'good');
     } catch (err) { say('import-msg', err && err.code === 'declined' ? 'Not saved.' : 'Could not save the template here.', err && err.code === 'declined' ? '' : 'bad'); }
   });
   $('import-close').addEventListener('click', function(){ if (importing || reading) return; importOpen = false; resetImport(''); renderAdmin(); });
