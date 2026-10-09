@@ -30,7 +30,7 @@ img{max-width:100%}
   --paper-2:#F4EDDE;      /* deeper ivory */
   --strip:#E8E1D2;        /* the date strip: the deeper ivory, a shade darker */
   --tab-on:#EADCD6;
-  --menu-line:rgba(251,243,226,.2);   /* hairlines on the burgundy menu */       /* the chosen Arrived / Still to come tab: a pale burgundy, quieter than Scan a pass */
+  --menu-line:rgba(251,243,226,.2);   /* hairlines on the burgundy menu */       /* the chosen Guests / Arrived tab: a pale burgundy, quieter than Scan a pass */
   --banner:#FFFDF8;       /* flat banner white */
   --ink:#33221A;
   --muted:#6C594B;
@@ -204,7 +204,9 @@ button,input,select{font:inherit;color:inherit}
 .tabs button{flex:1 1 0;min-width:0;padding:13px 8px;background:transparent;border:0;border-radius:0;cursor:pointer;
   font:500 .78rem/1.3 var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
 .tabs button[aria-selected="true"]{background:var(--tab-on);color:var(--accent)}
-.tabs b{font-weight:500;font-variant-numeric:tabular-nums;margin-left:.4em}
+.tabs button{display:inline-flex;align-items:center;justify-content:center}
+.tabs b{display:inline-grid;place-items:center;min-width:2.1em;height:2.1em;padding:0 .5em;margin-left:.7em;border:1px solid currentColor;border-radius:999px;
+  font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:0}   /* the count in a circle */
 .rows li{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 16px;padding-block:13px;border-bottom:1px solid var(--line)}
 .r-name{font:400 1.18rem/1.25 var(--display);min-width:0;overflow-wrap:anywhere}
 .r-meta{display:flex;align-items:baseline;gap:12px;font-size:.92rem;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -451,8 +453,8 @@ dialog.pass::backdrop{background:var(--veil)}
     <h2 class="ledger-title" id="ledger-title">Guest list</h2>
     <div class="ledger-bar" id="ledger-bar">
       <div class="tabs" role="tablist">
-        <button type="button" id="tab-in" role="tab" aria-selected="true" aria-controls="rows">Arrived<b id="n-in">0</b></button>
-        <button type="button" id="tab-out" role="tab" aria-selected="false" aria-controls="rows">Still to come<b id="n-out">0</b></button>
+        <button type="button" id="tab-out" role="tab" aria-selected="true" aria-controls="rows">Guests<b id="n-out">0</b></button>
+        <button type="button" id="tab-in" role="tab" aria-selected="false" aria-controls="rows">Arrived<b id="n-in">0</b></button>
       </div>
       <div class="find-row">
         <label class="sr" for="find">Search guests by name</label>
@@ -883,7 +885,7 @@ dialog.pass::backdrop{background:var(--veil)}
   var findType = '', qType = '', typeEdit = null, typeBusy = false;
   var guests = new Map();          // entry code -> guest record, kept live from the shared guest list
   var loaded = false, db = null, saver = null, busy = false, isOwner = false, canWrite = true;
-  var mode = 'door', view = 'in', find = '', resetting = false;
+  var mode = 'door', view = 'out', find = '', resetting = false;
   var q = '', filt = 'all', rowState = null, dupOk = '', passOpen = null;
   var picking = false, picked = new Set(), removing = false;   // selecting guests to remove several at once
   var importOpen = false, pending = null, importing = false, sheetReader = null, paint = 0;
@@ -1581,7 +1583,7 @@ dialog.pass::backdrop{background:var(--veil)}
       : !everyone.length ? 'No guests on the list yet.'
       : !list.length ? 'No one on the list is under ' + findType + '.'
       : want ? 'No guest with that name ' + (view === 'in' ? 'has arrived.' : 'is still to come.')
-          + (elsewhere ? ' ' + elsewhere + (elsewhere === 1 ? ' match' : ' matches') + ' under ' + (view === 'in' ? 'Still to come.' : 'Arrived.') : '')
+          + (elsewhere ? ' ' + elsewhere + (elsewhere === 1 ? ' match' : ' matches') + ' under ' + (view === 'in' ? 'Guests.' : 'Arrived.') : '')
       : findType ? (view === 'in' ? 'No one under ' + findType + ' has arrived yet.' : 'Everyone under ' + findType + ' has arrived.')
       : view === 'in' ? 'Guests appear here as they are checked in.' : 'Everyone on the list has arrived.';
   }
@@ -2667,8 +2669,8 @@ dialog.pass::backdrop{background:var(--veil)}
   function renderCi(){
     $('ci-go').textContent = ciLock ? 'Change check-in code' : 'Set check-in code';
     $('ci-state').textContent = ciLock
-      ? 'Helpers can check a guest in from the Still to come list, for a guest who arrives without their pass. They are asked for this 6-digit code each time.'
-      : 'No check-in code yet. Set one to put a Check in button beside each name under Still to come, for a guest who arrives without their pass. Helpers are asked for the code each time.';
+      ? 'Helpers can check a guest in from the Guests list, for a guest who arrives without their pass. They are asked for this 6-digit code each time.'
+      : 'No check-in code yet. Set one to put a Check in button beside each name under Guests, for a guest who arrives without their pass. Helpers are asked for the code each time.';
   }
   $('ci-form').addEventListener('submit', async function(e){
     e.preventDefault();
@@ -2684,7 +2686,7 @@ dialog.pass::backdrop{background:var(--veil)}
       useCiLock(rec);
       $('ci-new').value = ''; $('ci-again').value = '';
       renderCi(); renderDoor();
-      say('ci-msg', had ? 'Check-in code changed. The old code no longer works.' : 'Check-in code saved. Still to come now has a Check in button beside each name.', 'good');
+      say('ci-msg', had ? 'Check-in code changed. The old code no longer works.' : 'Check-in code saved. Guests now has a Check in button beside each name.', 'good');
     } catch (err) {
       say('ci-msg', 'Could not save the check-in code. Check the signal and try again.', 'bad');
     }
