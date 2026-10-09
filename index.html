@@ -72,6 +72,18 @@ button,input,select{font:inherit;color:inherit}
 
 /* ---------- masthead ---------- */
 .mast{background:var(--paper-2)}
+/* the header shrinks to a slim bar once it scrolls away: the logo (back to the door) and the menu, always at the top */
+:root{--bar-h:calc(60px + env(safe-area-inset-top,0px))}
+.mini{position:fixed;top:0;left:0;right:0;z-index:30;padding-top:env(safe-area-inset-top,0px);background:var(--paper-2);border-bottom:1px solid var(--line);
+  transform:translateY(-100%);visibility:hidden;transition:transform .25s ease,visibility 0s linear .25s}
+.mini.on{transform:none;visibility:visible;transition:transform .25s ease,visibility 0s}
+.mini-in{display:flex;align-items:center;justify-content:space-between;gap:12px;height:60px}
+.mini-home{display:flex;align-items:center;gap:10px;min-width:0;text-decoration:none;color:var(--ink)}
+.mini-crest{width:54px;height:auto;flex:none;display:block}
+.mini-title{font:400 1.15rem/1.1 var(--display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini-crest:not([hidden]) + .mini-title{display:none}   /* with the logo there, the logo is enough */
+.mini-menu{width:40px;height:40px}
+@media (prefers-reduced-motion:reduce){.mini,.mini.on{transition:none}}
 .mast-in{display:flex;flex-wrap:wrap;align-items:center;gap:12px clamp(14px,4vw,24px);padding-block:18px}
 .home{display:block;flex:none;line-height:0;border-radius:50%}   /* the logo goes back to the door */
 .home:has(> .crest[hidden]){display:none}
@@ -229,7 +241,7 @@ select.text-in::-ms-expand{display:none}
 
 .ledger{display:grid;gap:0;margin-top:48px}   /* clear space between the check-in tools and the list, the same on a phone */
 .ledger-title{font:400 clamp(1.6rem,5.4vw,2.1rem)/1.1 var(--display);margin-bottom:18px;text-wrap:balance}
-.ledger-bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;display:grid;gap:10px;padding-bottom:10px;
+.ledger-bar{position:sticky;top:var(--bar-h);z-index:10;display:grid;gap:10px;padding-bottom:10px;
   background:var(--paper);border-bottom:1px solid var(--line)}   /* the tabs and the search stay in reach down a long list */
 .tabs{display:flex;gap:0;border-bottom:1px solid var(--accent)}
 .tabs button{flex:1 1 0;min-width:0;padding:13px 8px;background:transparent;border:0;border-radius:0;cursor:pointer;
@@ -248,11 +260,14 @@ select.text-in::-ms-expand{display:none}
 /* an empty list: adding one guest and uploading a list, side by side and equal */
 .start{display:grid;gap:14px}
 .start h2{font:400 clamp(1.5rem,5vw,1.9rem)/1.15 var(--display)}
-.start-choices{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.start-choice{display:grid;gap:8px;align-content:start;padding:clamp(14px,4vw,20px);text-align:left;background:var(--banner);border:1px solid var(--accent);border-radius:0;cursor:pointer;color:var(--ink)}
-.start-choice b{font:500 .82rem/1.2 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
-.start-choice span{color:var(--muted);line-height:1.45}
-.start-choice:hover,.start-choice:focus-visible{background:var(--tab-on);outline:none}
+.start-choices{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:600px){.start-choices{grid-template-columns:1fr}}   /* stacked on a phone */
+.start-choice{display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:24px;background:var(--banner);border:1px solid var(--line);color:var(--ink)}
+.start-icon{flex:none;display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:var(--tab-on);color:var(--accent)}
+.start-choice h3{margin:4px 0 0;font:400 1.4rem/1.2 var(--display)}
+.start-choice p{margin:0;color:var(--muted);line-height:1.5}
+.start-choice .btn{margin-top:auto}
+.start-choice p{margin-bottom:6px}
 .actions > .btn,.add-menu{flex:1 1 10rem}
 /* Add guests opens two choices: one guest, or many from Excel */
 .add-menu{position:relative;display:grid}
@@ -267,7 +282,7 @@ select.text-in::-ms-expand{display:none}
 .add-choice b{font:500 .78rem/1.2 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
 .add-choice span{font-size:.92rem;color:var(--muted)}
 .add-choice:hover,.add-choice:focus-visible{background:var(--tab-on);outline:none}
-.tools{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;display:grid;gap:12px;padding-block:10px;
+.tools{position:sticky;top:var(--bar-h);z-index:10;display:grid;gap:12px;padding-block:10px;
   background:var(--paper);border-bottom:1px solid var(--line)}   /* the search and filters stay in reach down a long list */
 .tools.still{position:static}   /* while selecting, the selection bar takes the top instead */
 .find-row{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:8px}   /* search, then the guest type */
@@ -291,7 +306,7 @@ select.text-in::-ms-expand{display:none}
 .m-main .status{margin-top:3px}
 .m-acts{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:2px 20px}
 /* selecting several guests to remove at once */
-.sel-bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:12;display:grid;gap:10px;padding-block:10px;background:var(--paper);border-bottom:1px solid var(--line)}
+.sel-bar{position:sticky;top:var(--bar-h);z-index:12;display:grid;gap:10px;padding-block:10px;background:var(--paper);border-bottom:1px solid var(--line)}
 .sel-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px}
 .sel-count{font:500 .8rem/1.3 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--ink);font-variant-numeric:tabular-nums;margin-right:auto}
 .sel-row .icon-btn{margin-left:-6px}
@@ -303,7 +318,7 @@ select.text-in::-ms-expand{display:none}
 /* ---------- settings: a page with a sticky tab bar ---------- */
 .s-wrap{max-width:1040px}
 .on-settings .mast .wrap,.on-settings .carpet .wrap{max-width:1040px}   /* the header lines up with the wider settings page */
-.s-bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;background:var(--paper);border-bottom:1px solid var(--line)}
+.s-bar{position:sticky;top:var(--bar-h);z-index:15;background:var(--paper);border-bottom:1px solid var(--line)}
 .s-bar .s-wrap{display:grid;padding-top:6px}
 .s-tabs{display:flex;gap:clamp(20px,3.6vw,36px);overflow-x:auto;scrollbar-width:none;
   margin-inline:calc(var(--gutter) * -1);padding-inline:var(--gutter)}
@@ -337,7 +352,7 @@ select.text-in::-ms-expand{display:none}
 .s-preview .hint{color:var(--muted);font-size:.92rem}
 @media (min-width:900px){
   .s-cols.with-preview{grid-template-columns:minmax(0,1fr) 300px}
-  .s-preview{position:sticky;top:calc(env(safe-area-inset-top,0px) + 124px)}
+  .s-preview{position:sticky;top:calc(var(--bar-h) + 76px)}
 }
 
 /* ---------- pass preview ---------- */
@@ -402,7 +417,13 @@ dialog.pass::backdrop{background:var(--veil)}
   </symbol>
 </svg>
 
-<header class="mast">
+<div class="mini" id="mini">
+  <div class="wrap mini-in">
+    <a class="mini-home" id="mini-home" href="./" aria-label="Back to door check-in"><img class="mini-crest" id="mini-crest" alt="" width="510" height="490" hidden><span class="mini-title" id="mini-title"></span></a>
+    <button class="icon-btn mini-menu" type="button" id="mini-menu" aria-label="Menu" aria-expanded="false" aria-controls="menu-panel" hidden><svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false"><path d="M3 5.5h14M3 10h14M3 14.5h14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></button>
+  </div>
+</div>
+<header class="mast" id="mast">
   <div class="wrap mast-in">
     <a class="home" id="home" href="./" aria-label="Back to door check-in"><img class="crest" id="crest-img" alt="" width="510" height="490" hidden></a>
     <div class="mast-text">
@@ -521,8 +542,18 @@ dialog.pass::backdrop{background:var(--veil)}
   <section class="start" id="m-start" hidden>
     <h2>Start your guest list</h2>
     <div class="start-choices">
-      <button class="start-choice" type="button" id="start-one"><b>Add a guest</b><span>Type one name and choose their guest type.</span></button>
-      <button class="start-choice" type="button" id="start-bulk"><b>Upload a list</b><span>Add many guests at once from an Excel file.</span></button>
+      <div class="start-choice">
+        <span class="start-icon" aria-hidden="true"><svg viewBox="0 0 32 32" width="30" height="30" focusable="false"><circle cx="13" cy="10.5" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 27c.8-5.6 4.6-9 9.5-9s8.7 3.4 9.5 9" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M25.5 7v8M21.5 11h8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></span>
+        <h3>Add a guest</h3>
+        <p>Type one name and choose their guest type. Their pass is ready straight away.</p>
+        <button class="btn" type="button" id="start-one">Add a guest</button>
+      </div>
+      <div class="start-choice">
+        <span class="start-icon" aria-hidden="true"><svg viewBox="0 0 32 32" width="30" height="30" focusable="false"><rect x="4.5" y="5.5" width="23" height="21" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4.5 11.5h23M12.5 5.5v21" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M20 23v-7.5M16.8 18.4 20 15.2l3.2 3.2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></span>
+        <h3>Upload a list</h3>
+        <p>Add many guests at once from an Excel file. Each gets their own pass.</p>
+        <button class="btn" type="button" id="start-bulk">Upload a list</button>
+      </div>
     </div>
   </section>
 
@@ -1027,6 +1058,7 @@ dialog.pass::backdrop{background:var(--veil)}
     $('when').textContent = whenLine();
     var art = originalCrest(), label = coupleLine('and') + (crestDate(cfg.date) ? ', ' + longDate(cfg.date) : '');
     $('crest-img').hidden = !cfg.name1; $('crest-img').alt = cfg.name1 ? 'Monogram: ' + label : '';
+    $('mini-crest').hidden = !cfg.name1;
     if (cfg.name1) paintCrest();
     $('event-nudge').hidden = !(isOwner && !eventSaved);
   }
@@ -1311,14 +1343,14 @@ dialog.pass::backdrop{background:var(--veil)}
     var i = 0;   // the lines that show come in one after another
     p.querySelectorAll('.menu-anim').forEach(function(n){ if (!n.hidden) n.style.setProperty('--i', i++); });
     p.hidden = false;
-    $('menu-btn').setAttribute('aria-expanded', 'true');
+    $('menu-btn').setAttribute('aria-expanded', 'true'); $('mini-menu').setAttribute('aria-expanded', 'true');
     document.documentElement.style.overflow = 'hidden';
     try { $('menu-close').focus({preventScroll: true}); } catch (e) {}
   }
   function closeMenu(focusBack){
     var p = $('menu-panel');
     if (p.hidden || p.classList.contains('closing')) return;
-    $('menu-btn').setAttribute('aria-expanded', 'false');
+    $('menu-btn').setAttribute('aria-expanded', 'false'); $('mini-menu').setAttribute('aria-expanded', 'false');
     document.documentElement.style.overflow = '';
     var finished = false;
     function done(){ if (finished) return; finished = true; p.classList.remove('closing'); p.hidden = true; }
@@ -1328,9 +1360,20 @@ dialog.pass::backdrop{background:var(--veil)}
       p.addEventListener('animationend', function end(e){ if (e.target !== p) return; p.removeEventListener('animationend', end); done(); });
       setTimeout(done, 450);
     }
-    if (focusBack) { try { $('menu-btn').focus({preventScroll: true}); } catch (e) {} }
+    if (focusBack) { try { $(miniFrom && $('mini').classList.contains('on') ? 'mini-menu' : 'menu-btn').focus({preventScroll: true}); } catch (e) {} }
+    miniFrom = null;
   }
-  function syncMenu(){ var none = !menuHasItems(); if ($('menu-btn').hidden !== none) $('menu-btn').hidden = none; if (none) closeMenu(); }
+  function syncMenu(){ var none = !menuHasItems(); if ($('menu-btn').hidden !== none) $('menu-btn').hidden = none; $('mini-menu').hidden = none; if (none) closeMenu(); }
+  // the slim bar: shown once the full header has scrolled up under it
+  var miniFrom = null;
+  function syncMini(){
+    var b = $('mast').getBoundingClientRect().bottom, bar = $('mini').offsetHeight || 60;
+    $('mini').classList.toggle('on', b < bar);
+    $('mini-title').textContent = $('page-title').textContent;
+  }
+  window.addEventListener('scroll', syncMini, {passive: true}); window.addEventListener('resize', syncMini);
+  $('mini-menu').addEventListener('click', function(){ miniFrom = true; openMenu(); });
+  $('mini-home').addEventListener('click', function(e){ e.preventDefault(); $('home').click(); });
   new MutationObserver(function(recs){
     if (recs.some(function(r){ return r.target !== $('menu-panel'); })) syncMenu();
   }).observe($('menu-panel'), {subtree: true, attributes: true, attributeFilter: ['hidden']});
@@ -1395,7 +1438,7 @@ dialog.pass::backdrop{background:var(--veil)}
     if (turn !== crestTurn || !cfg.name1) return;
     var c = document.createElement('canvas'); c.width = 1020; c.height = 980;
     drawCrest(c.getContext('2d'), 0, 0, 1020, (THEMES[cfg.theme] || THEMES.burgundy).accent);
-    try { $('crest-img').src = c.toDataURL('image/png'); } catch (e) {}
+    try { $('crest-img').src = $('mini-crest').src = c.toDataURL('image/png'); } catch (e) {}
   }   // lock = the saved passcode record, never the passcode itself
 
   function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
@@ -2542,7 +2585,7 @@ dialog.pass::backdrop{background:var(--veil)}
   });
 
   /* ================= switching between the door and the guest list ================= */
-  function render(){ fillTypes(); renderTally(); if (mode === 'admin') renderAdmin(); else if (mode === 'door') renderDoor(); else if (mode === 'settings' && sTab === 'types') renderTypes(); }
+  function render(){ syncMini(); fillTypes(); renderTally(); if (mode === 'admin') renderAdmin(); else if (mode === 'door') renderDoor(); else if (mode === 'settings' && sTab === 'types') renderTypes(); }
   function setMode(m){
     mode = (m === 'admin' || m === 'settings') && unlocked ? m : 'door';
     if (mode !== 'door') stopCamera();
