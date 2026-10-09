@@ -370,6 +370,24 @@ dialog.pass::backdrop{background:var(--veil)}
 .pass-in{display:grid;gap:12px;padding:16px}
 .pass-in img{display:block;width:100%;height:auto;border:1px solid var(--line);background:var(--banner)}
 .fmt-choices{display:grid;border:1px solid var(--line);background:var(--banner)}
+/* WhatsApp: the send sheet and the message */
+.wa-who h2{font:400 1.5rem/1.2 var(--display)}
+.wa-who p{color:var(--muted);font-variant-numeric:tabular-nums}
+.wa-steps{display:grid;gap:14px;margin:0;padding:0;list-style:none}
+.wa-steps li{display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:start}
+.wa-n{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--tab-on);color:var(--accent);font:500 .85rem/1 var(--body)}
+.wa-steps .wa-step{line-height:1.45}
+.wa-steps .wa-step.good{color:var(--ok)}
+.wa-steps .wa-step.bad{color:var(--stop)}
+.wa-steps .link{margin-top:6px;margin-right:16px}
+.wa-open{justify-self:start;margin-bottom:6px}
+.wa-preview{display:grid;gap:8px;padding:14px;background:var(--banner);border:1px solid var(--line)}
+.wa-text{white-space:pre-wrap;line-height:1.5;overflow-wrap:anywhere}
+.wa-msg{min-height:12rem;resize:vertical;line-height:1.5;font-size:1rem}
+.wa-cc{max-width:7rem}
+.wa-sample{display:grid;gap:8px}
+.m-wa{font-size:.9rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.m-wa.sent{color:var(--ok)}
 .pass-in .hint{color:var(--muted);font-size:.95rem}
 .ci-name{font:400 1.6rem/1.15 var(--display);overflow-wrap:anywhere;margin-top:-4px}
 /* a door row: the guest's name over their list on the left; who checked them in and when, or Check in, on the right */
@@ -606,6 +624,10 @@ dialog.pass::backdrop{background:var(--veil)}
           <select class="text-in" id="add-list" data-types="pick"><option>Groom's guest</option><option>Bride's guest</option><option>Vendor</option></select>
         </div>
       </div>
+      <div class="field">
+        <label class="sr" for="add-phone">WhatsApp number</label>
+        <input class="text-in" id="add-phone" type="tel" inputmode="tel" maxlength="24" autocomplete="off" placeholder="WhatsApp number (optional), for example 0803 123 4567">
+      </div>
       <div class="row">
         <button class="btn" type="submit" id="add-go">Add guest</button>
         <button class="btn ghost" type="button" id="add-cancel">Close</button>
@@ -713,6 +735,7 @@ dialog.pass::backdrop{background:var(--veil)}
         <button type="button" role="tab" id="tab-passcode" data-tab="passcode" aria-controls="lock-box" aria-selected="false" tabindex="-1">Passcode</button>
         <button type="button" role="tab" id="tab-checkin" data-tab="checkin" aria-controls="ci-box" aria-selected="false" tabindex="-1">Check-in code</button>
         <button type="button" role="tab" id="tab-types" data-tab="types" aria-controls="types-box" aria-selected="false" tabindex="-1">Guest types</button>
+        <button type="button" role="tab" id="tab-wa" data-tab="wa" aria-controls="wa-box" aria-selected="false" tabindex="-1">WhatsApp</button>
         <button type="button" role="tab" id="tab-list" data-tab="list" aria-controls="list-box" aria-selected="false" tabindex="-1">Guest list</button>
       </div>
     </div>
@@ -880,6 +903,34 @@ dialog.pass::backdrop{background:var(--veil)}
     <p class="msg" id="type-msg" role="status"></p>
   </section>
 
+  <section class="s-panel" id="wa-box" role="tabpanel" aria-labelledby="tab-wa" hidden>
+    <header class="s-head">
+      <h2>WhatsApp</h2>
+      <p>The message that goes with each guest's pass. Write {{Fullname}} where the guest's name should go.</p>
+    </header>
+    <p class="notice" id="wa-rules" hidden>WhatsApp numbers cannot be saved yet. The database rules need the WhatsApp update: see the note on publishing the rules.</p>
+    <form class="event-form" id="wa-form" novalidate>
+      <div class="field">
+        <label class="label" for="wa-msg">Message</label>
+        <textarea class="text-in wa-msg" id="wa-msg" rows="9" maxlength="1500"></textarea>
+      </div>
+      <div class="field">
+        <label class="label" for="wa-cc">Country code for numbers written without one</label>
+        <input class="text-in wa-cc" id="wa-cc" type="text" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="234">
+        <p class="ls-note">So 0803 123 4567 is sent to +234 803 123 4567.</p>
+      </div>
+      <div class="s-card wa-sample">
+        <p class="imp-label">How it reads for Mrs Ada Obi</p>
+        <p class="wa-text" id="wa-sample"></p>
+      </div>
+      <div class="row">
+        <button class="btn" type="submit" id="wa-go">Save message</button>
+        <button class="btn ghost" type="button" id="wa-reset">Use the suggested message</button>
+      </div>
+    </form>
+    <p class="msg" id="wa-save-msg" role="status"></p>
+  </section>
+
   <section class="s-panel" id="list-box" role="tabpanel" aria-labelledby="tab-list" hidden>
     <header class="s-head">
       <h2>Guest list</h2>
@@ -967,6 +1018,23 @@ dialog.pass::backdrop{background:var(--veil)}
   </form>
 </dialog>
 
+<dialog class="pass wa-dlg" id="wa-dialog" aria-labelledby="wa-title">
+  <div class="pass-in">
+    <div class="sheet-head">
+      <p class="eyebrow">Send on WhatsApp</p>
+      <button class="icon-btn" type="button" id="wa-close" aria-label="Close"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false"><path d="M4 4 16 16M16 4 4 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></button>
+    </div>
+    <div class="wa-who"><h2 id="wa-title"></h2><p id="wa-to"></p></div>
+    <ol class="wa-steps">
+      <li><span class="wa-n">1</span><div><p class="wa-step" id="wa-copy-state">Copying the pass…</p><button class="link" type="button" id="wa-copy-again" hidden>Copy the pass again</button><button class="link" type="button" id="wa-save" hidden>Save the pass instead</button></div></li>
+      <li><span class="wa-n">2</span><div><a class="btn wa-open" id="wa-open" href="#" target="_blank" rel="noopener">Open WhatsApp chat</a><p class="ls-note">The message below is already typed in.</p></div></li>
+      <li><span class="wa-n">3</span><div><p class="wa-step" id="wa-paste-hint">In WhatsApp, press and hold the message box and tap <b>Paste</b>. The pass is attached; then press send.</p></div></li>
+    </ol>
+    <div class="wa-preview"><p class="imp-label">Message</p><p class="wa-text" id="wa-text"></p></div>
+    <p class="msg" id="wa-msg-line" role="status"></p>
+  </div>
+</dialog>
+
 <dialog class="pass" id="pass-dialog" aria-labelledby="pass-title">
   <div class="pass-in">
     <div class="sheet-head">
@@ -1011,6 +1079,8 @@ dialog.pass::backdrop{background:var(--veil)}
   var DEFAULT_LISTS = ["Groom's guest", "Bride's guest", "Vendor"];
   var LISTS = DEFAULT_LISTS.slice();   // the guest types, set in Settings (settings/lists)
   var findType = '', qType = '', typeEdit = null, typeBusy = false;
+  var contacts = new Map(), contactsOk = true;   // entry code -> {phone, sentAt}; organisers only (the contacts collection)
+  var waCfg = {message: '', cc: '234'}, waFor = null;
   var guests = new Map();          // entry code -> guest record, kept live from the shared guest list
   var loaded = false, db = null, saver = null, busy = false, isOwner = false, canWrite = true;
   var mode = 'door', view = 'out', find = '', resetting = false;
@@ -1146,6 +1216,97 @@ dialog.pass::backdrop{background:var(--veil)}
 
   /* ---------- people who can sign in: organisers and door helpers ---------- */
   var staffEdit = '';   // the person whose name is being changed
+  /* ================= WhatsApp: numbers, the message and sending a pass ================= */
+  // A number as WhatsApp wants it: digits only, with the country code. 0803... uses the country code from Settings.
+  function cleanPhone(raw){
+    var s = String(raw == null ? '' : raw).trim(); if (!s) return '';
+    var d = s.replace(/[^0-9]/g, ''); if (!d) return '';
+    if (/^\+/.test(s)) {}
+    else if (/^00/.test(d)) d = d.slice(2);
+    else if (d.charAt(0) === '0') d = (waCfg.cc || '234') + d.slice(1);
+    else if (d.length <= 10) d = (waCfg.cc || '234') + d;
+    return d.length >= 8 && d.length <= 15 ? d : '';
+  }
+  function showPhone(d){ return d ? '+' + d : ''; }
+  function defaultWa(){
+    var when = longDate(cfg.date), tm = niceTime(cfg.time), what = (cfg.type || 'celebration').toLowerCase();
+    return 'Hi {{Fullname}},\n\n' +
+      'We would love you to join us for our ' + what + (when ? ' on ' + when : '') + (tm ? ' at ' + tm : '') + (cfg.venue ? ', ' + cfg.venue : '') + '.\n\n' +
+      'Your personal pass is attached. Please show its QR code at the entrance. It admits only one person.\n\n' +
+      'With love,\n' + (cfg.name1 ? coupleLine('&') : 'The couple');
+  }
+  function waTemplate(){ return waCfg.message || defaultWa(); }
+  function waMessage(g, tpl){ return (tpl || waTemplate()).replace(/\{\{\s*(full\s*name|fullname|name)\s*\}\}/gi, g.name); }
+  function waLine(g){
+    var c = contacts.get(g.code);
+    if (!c || !c.phone) return null;
+    return {text: c.sentAt ? 'Pass sent on WhatsApp ' + clock(c.sentAt) : 'Pass not sent on WhatsApp yet', sent: !!c.sentAt};
+  }
+  async function saveContact(code, phone){
+    if (!db || !isOwner) return;
+    if (!phone) { await db.collection('contacts').doc(code).delete(); return; }
+    var c = contacts.get(code);
+    await db.collection('contacts').doc(code).set({phone: phone, sentAt: c && c.phone === phone ? (c.sentAt || 0) : 0});
+  }
+  function dropContact(code){ if (db && isOwner && contacts.has(code)) db.collection('contacts').doc(code).delete().catch(function(){}); }
+  // Copy the pass picture so it can be pasted into the WhatsApp chat. Called straight from the tap, as phones require.
+  function copyPass(g){
+    if (!navigator.clipboard || !navigator.clipboard.write || !window.ClipboardItem) return Promise.reject(new Error('no clipboard'));
+    var blob = passBlob(g);
+    return navigator.clipboard.write([new ClipboardItem({'image/png': blob})])
+      .catch(function(){ return blob.then(function(b){ return navigator.clipboard.write([new ClipboardItem({'image/png': b})]); }); });
+  }
+  function waState(text, tone){ var n = $('wa-copy-state'); n.textContent = text; n.className = 'wa-step' + (tone ? ' ' + tone : ''); }
+  function runCopy(g){
+    waState('Copying the pass…'); $('wa-copy-again').hidden = true; $('wa-save').hidden = true;
+    copyPass(g).then(function(){ if (waFor === g.code) { waState('Pass copied.', 'good'); $('wa-copy-again').hidden = false; } },
+      function(){ if (waFor !== g.code) return; waState('This phone could not copy the pass picture. Save it instead, then attach it from your photos in WhatsApp.', 'bad'); $('wa-copy-again').hidden = false; $('wa-save').hidden = !saver; });
+  }
+  function openWa(g){
+    var c = contacts.get(g.code); if (!c || !c.phone) return;
+    if (!window.qrcode || !window.jsQR) { say('m-msg', 'The pass maker did not load. Check the signal and reload the page.', 'bad'); return; }
+    waFor = g.code;
+    $('wa-title').textContent = g.name; $('wa-to').textContent = 'To ' + showPhone(c.phone);
+    var text = waMessage(g);
+    $('wa-text').textContent = text;
+    $('wa-open').href = 'https://wa.me/' + c.phone + '?text=' + encodeURIComponent(text);
+    say('wa-msg-line', '');
+    runCopy(g);   // straight away, inside the tap
+    var dlg = $('wa-dialog');
+    if (!dlg.open) { if (dlg.showModal) { try { dlg.showModal(); } catch (e) { dlg.setAttribute('open', ''); } } else dlg.setAttribute('open', ''); }
+  }
+  function closeWa(){ waFor = null; var dlg = $('wa-dialog'); if (dlg.open) { if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); } }
+  $('wa-close').addEventListener('click', closeWa);
+  $('wa-dialog').addEventListener('close', function(){ waFor = null; });
+  $('wa-copy-again').addEventListener('click', function(){ var g = waFor && guests.get(waFor); if (g) runCopy(g); });
+  $('wa-save').addEventListener('click', async function(){
+    var g = waFor && guests.get(waFor); if (!g) return;
+    try { await savePass(g, await passBlob(g), 'wa-msg-line', 'png'); } catch (e) { say('wa-msg-line', 'Could not draw the pass. Try again.', 'bad'); }
+  });
+  // Opening the chat marks the pass as sent, so a long list can be worked through without sending anyone twice.
+  $('wa-open').addEventListener('click', function(){
+    var code = waFor, c = code && contacts.get(code);
+    if (!c || !db) return;
+    db.collection('contacts').doc(code).set({phone: c.phone, sentAt: Date.now()}).catch(function(){});
+  });
+  // Settings: the message and the country code
+  function fillWaForm(){ $('wa-msg').value = waTemplate(); $('wa-cc').value = waCfg.cc || '234'; paintWaSample(); $('wa-rules').hidden = contactsOk; }
+  function paintWaSample(){ $('wa-sample').textContent = waMessage({name: 'Mrs Ada Obi'}, $('wa-msg').value || defaultWa()); }
+  $('wa-msg').addEventListener('input', paintWaSample);
+  $('wa-reset').addEventListener('click', function(){ $('wa-msg').value = defaultWa(); paintWaSample(); say('wa-save-msg', 'Suggested message filled in. Save it to use it.'); });
+  $('wa-form').addEventListener('submit', async function(e){
+    e.preventDefault();
+    if (!db || !isOwner) return;
+    var msg = $('wa-msg').value.replace(/\r/g, '').trim().slice(0, 1500), cc = $('wa-cc').value.replace(/[^0-9]/g, '').slice(0, 4);
+    if (!msg) { say('wa-save-msg', 'Write a message first.', 'bad'); return; }
+    if (!/\{\{\s*(full\s*name|fullname|name)\s*\}\}/i.test(msg)) { say('wa-save-msg', 'Put {{Fullname}} where the guest\'s name should go.', 'bad'); return; }
+    if (!cc) { say('wa-save-msg', 'Type a country code, for example 234 for Nigeria.', 'bad'); return; }
+    $('wa-go').disabled = true;
+    try { await db.doc('settings/whatsapp').set({message: msg, cc: cc}); say('wa-save-msg', 'Saved. Every pass sent on WhatsApp from now on uses this message.', 'good'); }
+    catch (err) { say('wa-save-msg', 'Could not save the message. Check the signal and try again.', 'bad'); }
+    $('wa-go').disabled = false;
+  });
+
   /* ================= guest types (Settings) ================= */
   function cleanTypes(d){
     var seen = {}, out = [];
@@ -1853,6 +2014,7 @@ dialog.pass::backdrop{background:var(--veil)}
       meta.appendChild(el('span', 'm-code', g.code));
       main.appendChild(meta);
       main.appendChild(el('span', 'status' + (g.checkedInAt ? ' in' : ''), g.checkedInAt ? 'Arrived ' + clock(g.checkedInAt) + byLine(g) : 'Not arrived'));
+      var wl = waLine(g); if (wl) main.appendChild(el('span', 'm-wa' + (wl.sent ? ' sent' : ''), wl.text));
       li.appendChild(main);
 
       if (picking) {
@@ -1863,11 +2025,15 @@ dialog.pass::backdrop{background:var(--veil)}
         var input = el('input', 'text-in'); input.id = 'edit-name'; input.type = 'text'; input.maxLength = 60; input.autocomplete = 'off'; input.value = rowState.name;
         var lab2 = el('label', 'sr', 'Whose guest'); lab2.htmlFor = 'edit-list';
         var pick = listPicker('edit-list', rowState.list);
+        var lab3 = el('label', 'label', 'WhatsApp number'); lab3.htmlFor = 'edit-phone';
+        var ph = el('input', 'text-in'); ph.id = 'edit-phone'; ph.type = 'tel'; ph.inputMode = 'tel'; ph.maxLength = 24; ph.autocomplete = 'off'; ph.placeholder = 'For example 0803 123 4567'; ph.value = rowState.phone || '';
         var r = el('div', 'row');
         var save = el('button', 'btn small', 'Save'); save.type = 'submit';
         var cancel = el('button', 'btn ghost small', 'Cancel'); cancel.type = 'button'; cancel.dataset.act = 'cancel';
         r.appendChild(save); r.appendChild(cancel);
-        form.appendChild(lab); form.appendChild(input); form.appendChild(lab2); form.appendChild(pick); form.appendChild(r);
+        form.appendChild(lab); form.appendChild(input); form.appendChild(lab2); form.appendChild(pick);
+        if (isOwner) { form.appendChild(lab3); form.appendChild(ph); }
+        form.appendChild(r);
         li.appendChild(form);
       } else if (rowState && rowState.code === g.code && rowState.mode === 'remove') {
         var box = el('div', 'm-form');
@@ -1887,6 +2053,7 @@ dialog.pass::backdrop{background:var(--veil)}
         li.appendChild(box2);
       } else {
         var acts = el('div', 'm-acts');
+        if (wl) acts.appendChild(actBtn(wl.sent ? 'WhatsApp again' : 'WhatsApp', 'wa'));
         acts.appendChild(actBtn('Download', 'download'));
         acts.appendChild(actBtn('Share', 'share'));
         acts.appendChild(actBtn('New QR code', 'regen'));
@@ -1952,7 +2119,7 @@ dialog.pass::backdrop{background:var(--veil)}
     // a few at a time, so a long selection does not flood a weak signal
     for (var i = 0; i < codes.length; i += 10) {
       await Promise.all(codes.slice(i, i + 10).map(function(c){
-        return db.collection('guests').doc(c).delete().then(function(){ done++; picked.delete(c); }, function(){ failed.push(c); });
+        return db.collection('guests').doc(c).delete().then(function(){ done++; picked.delete(c); dropContact(c); }, function(){ failed.push(c); });
       }));
       say('m-msg', 'Removing guests: ' + done + ' of ' + codes.length + '.');
     }
@@ -1972,6 +2139,7 @@ dialog.pass::backdrop{background:var(--veil)}
     if (!rowState) return;
     if (e.target.id === 'edit-name') rowState.name = e.target.value;
     if (e.target.id === 'edit-list') rowState.list = e.target.value;
+    if (e.target.id === 'edit-phone') rowState.phone = e.target.value;
   });
   $('m-rows').addEventListener('change', function(e){ if (rowState && e.target.id === 'edit-list') rowState.list = e.target.value; });
   $('m-rows').addEventListener('submit', async function(e){
@@ -1979,13 +2147,19 @@ dialog.pass::backdrop{background:var(--veil)}
     if (!rowState || rowState.mode !== 'edit' || !db) return;
     var code = rowState.code, name = tidy(rowState.name), list = LISTS.indexOf(rowState.list) >= 0 || (guests.get(rowState.code) || {}).list === rowState.list ? rowState.list : LISTS[0];
     if (!name) { say('m-msg', 'A guest needs a name.', 'bad'); return; }
-    var before = guests.get(code);
+    var before = guests.get(code), had = (contacts.get(code) || {}).phone || '', typed = String(rowState.phone || '').trim(), phone = typed ? cleanPhone(typed) : '';
+    if (typed && !phone) { say('m-msg', 'That WhatsApp number does not look right. Use the full number, for example 0803 123 4567 or +44 7700 900123.', 'bad'); return; }
     try {
       await db.collection('guests').doc(code).update({name: name, list: list});
+      var phoneNote = '';
+      if (isOwner && phone !== had) {
+        try { await saveContact(code, phone); phoneNote = phone ? ' WhatsApp number saved.' : ' WhatsApp number removed.'; }
+        catch (err2) { phoneNote = ' The WhatsApp number could not be saved: the database rules need the WhatsApp update.'; }
+      }
       rowState = null;
-      say('m-msg', before && before.name !== name
+      say('m-msg', (before && before.name !== name
         ? 'Saved. ' + name + ' keeps the same entry code, so a pass already sent still works. Open Pass to download one with the new name.'
-        : 'Saved.', 'good');
+        : 'Saved.') + phoneNote, phoneNote.indexOf('could not') >= 0 ? 'bad' : 'good');
     } catch (err) { say('m-msg', 'Could not save the change. Check the signal and try again.', 'bad'); }
     renderAdmin();
   });
@@ -2006,9 +2180,10 @@ dialog.pass::backdrop{background:var(--veil)}
     var li = btn.closest('li'), code = li && li.dataset.code, g = code && guests.get(code), act = btn.dataset.act;
     if (!g) return;
     if (act === 'cancel') { rowState = null; renderAdmin(); return; }
-    if (act === 'edit') { rowState = {code: code, mode: 'edit', name: g.name, list: g.list}; renderAdmin(); var f = $('edit-name'); if (f) { f.focus(); f.select(); } return; }
+    if (act === 'edit') { rowState = {code: code, mode: 'edit', name: g.name, list: g.list, phone: showPhone((contacts.get(code) || {}).phone || '')}; renderAdmin(); var f = $('edit-name'); if (f) { f.focus(); f.select(); } return; }
     if (act === 'remove') { rowState = {code: code, mode: 'remove'}; renderAdmin(); return; }
     if (act === 'pass') { openPass(g); return; }
+    if (act === 'wa') { openWa(g); return; }
     if (act === 'regen') { rowState = {code: code, mode: 'regen'}; renderAdmin(); return; }
     if (act === 'download' || act === 'share') {
       btn.disabled = true;
@@ -2026,6 +2201,8 @@ dialog.pass::backdrop{background:var(--veil)}
         // the new code is saved first, then the old one is removed, so the guest is never left without a pass
         await db.collection('guests').doc(fresh).set({no: g.no, name: g.name, list: g.list, code: fresh, checkedInAt: g.checkedInAt || 0, checkedInByName: g.checkedInAt ? (g.by || '') : ''});
         made = true;
+        var oldC = contacts.get(code);
+        if (oldC && oldC.phone) { try { await db.collection('contacts').doc(fresh).set({phone: oldC.phone, sentAt: 0}); } catch (e3) {} dropContact(code); }   // the number moves to the new code; the new pass is not sent yet
         await db.collection('guests').doc(code).delete();
         rowState = null;
         say('m-msg', g.name + ' has a new QR code, ' + fresh + '. The old pass no longer works. Send them the new one.', 'good');
@@ -2046,7 +2223,7 @@ dialog.pass::backdrop{background:var(--veil)}
     }
     if (act === 'remove-yes') {
       btn.disabled = true;
-      try { await db.collection('guests').doc(code).delete(); rowState = null; say('m-msg', g.name + ' was removed. Their pass no longer works.', 'good'); }
+      try { await db.collection('guests').doc(code).delete(); dropContact(code); rowState = null; say('m-msg', g.name + ' was removed. Their pass no longer works.', 'good'); }
       catch (err) { say('m-msg', 'Could not remove the guest. Try again.', 'bad'); }
       renderAdmin();
     }
@@ -2104,6 +2281,8 @@ dialog.pass::backdrop{background:var(--veil)}
     if (!window.qrcode || !window.jsQR) { say('add-msg', 'The pass maker did not load. Check the signal and reload the page.', 'bad'); return; }
     var name = tidy($('add-name').value), list = LISTS.indexOf($('add-list').value) >= 0 ? $('add-list').value : LISTS[0];
     if (!name) { say('add-msg', "Type the guest's name first.", 'bad'); $('add-name').focus(); return; }
+    var typedPhone = $('add-phone').value.trim(), phone = typedPhone ? cleanPhone(typedPhone) : '';
+    if (typedPhone && !phone) { say('add-msg', 'That WhatsApp number does not look right. Use the full number, for example 0803 123 4567.', 'bad'); $('add-phone').focus(); return; }
     var twin = all().some(function(g){ return g.name.toLowerCase() === name.toLowerCase(); });
     if (twin && dupOk !== name.toLowerCase()) {
       dupOk = name.toLowerCase();
@@ -2117,8 +2296,11 @@ dialog.pass::backdrop{background:var(--veil)}
     $('add-go').disabled = true;
     try {
       await db.collection('guests').doc(code).set({no: no, name: name, list: list, code: code, checkedInAt: 0});
-      $('add-name').value = '';
-      say('add-msg', 'Added ' + name + '. Entry code ' + code + '. Download their pass and send it to them.', 'good');
+      var phoneBad = false;
+      if (phone) { try { await saveContact(code, phone); } catch (e2) { phoneBad = true; } }
+      $('add-name').value = ''; $('add-phone').value = '';
+      say('add-msg', 'Added ' + name + '. Entry code ' + code + '.' + (phone && !phoneBad ? ' Send their pass on WhatsApp from their row below.' : ' Download their pass and send it to them.')
+        + (phoneBad ? ' Their WhatsApp number could not be saved: the database rules need the WhatsApp update.' : ''), phoneBad ? 'bad' : 'good');
       openPass({code: code, name: name, list: list, no: no, checkedInAt: 0});
     } catch (err) {
       say('add-msg', 'Could not add the guest. Check the signal and try again.', 'bad');
@@ -2175,7 +2357,8 @@ dialog.pass::backdrop{background:var(--veil)}
       var h = c.trim().toLowerCase();
       if (!h || h.length > 30) return '';
       if (/^(entry )?code$/.test(h)) return 'code';
-      if (/phone|number|tel|mobile|email|table|seat|file|sent|note|arrived|whatsapp|^no\.?$/.test(h)) return '';
+      if (/email|table|seat|file|sent|note|arrived|^no\.?$/.test(h)) return '';
+      if (/whats ?app|phone|mobile|^tel|number|contact/.test(h)) return 'phone';
       if (/^(list|side|whose guest|group|category|type|guest type)$/.test(h)) return 'list';
       if (sideOf(h)) return 'side';
       if (h === 'family') return 'list';
@@ -2190,28 +2373,29 @@ dialog.pass::backdrop{background:var(--veil)}
       if (score > best) { best = score; head = i; }
     }
     if (head < 0) return null;
-    var sideCols = [], nameCol = -1, listCol = -1, codeCol = -1;
+    var sideCols = [], nameCol = -1, listCol = -1, codeCol = -1, phoneCol = -1;
     (rows[head] || []).forEach(function(c, j){
       var k = kind(c);
       if (k === 'side') sideCols.push({col: j, list: sideOf(c)});
       else if (k === 'name' && nameCol < 0) nameCol = j;
       else if (k === 'list' && listCol < 0) listCol = j;
       else if (k === 'code' && codeCol < 0) codeCol = j;
+      else if (k === 'phone' && phoneCol < 0) phoneCol = j;
     });
     if (!sideCols.length && nameCol < 0) return null;
     var people = [], splitRows = [];
-    function take(cell, list, code){
+    function take(cell, list, code, phone){
       if (!isName(cell)) return;
-      var names = splitPeople(cleanName(cell));
+      var names = splitPeople(cleanName(cell)), ph = phone == null ? '' : cleanPhone(phone);
       if (names.length > 1) splitRows.push(cleanName(cell));
-      // an entry code in the file is kept, so a pass that was already sent keeps working
-      names.forEach(function(n){ if (n) people.push({name: n, list: list, code: names.length === 1 ? norm(code) : null}); });
+      // an entry code in the file is kept, so a pass that was already sent keeps working; a shared number goes to each person on the row
+      names.forEach(function(n){ if (n) people.push({name: n, list: list, code: names.length === 1 ? norm(code) : null, phone: ph}); });
     }
     // a column per side is read side by side; otherwise one name column with optional list and entry code columns
     if (sideCols.length) sideCols.forEach(function(sc){ for (var r = head + 1; r < rows.length; r++) take((rows[r] || [])[sc.col], sc.list, null); });
     else for (var r = head + 1; r < rows.length; r++) {
       var row = rows[r] || [];
-      take(row[nameCol], listCol >= 0 ? sideOf(row[listCol]) : null, codeCol >= 0 ? row[codeCol] : null);
+      take(row[nameCol], listCol >= 0 ? sideOf(row[listCol]) : null, codeCol >= 0 ? row[codeCol] : null, phoneCol >= 0 ? row[phoneCol] : null);
     }
     return {people: people, splitRows: splitRows};
   }
@@ -2224,7 +2408,7 @@ dialog.pass::backdrop{background:var(--veil)}
     var pct = total ? Math.floor(done * 100 / total) : 0;
     $('import-fill').style.width = pct + '%'; $('import-bar').setAttribute('aria-valuenow', String(pct));
     $('import-pct').textContent = pct + '%';
-    $('import-done').textContent = done + ' of ' + total + (total === 1 ? ' guest' : ' guests');
+    $('import-done').textContent = done + ' of ' + total;
     var left = '';
     if (done >= Math.min(3, total) && done < total) {
       var secs = Math.ceil((Date.now() - startedAt) / done * (total - done) / 1000);
@@ -2240,19 +2424,22 @@ dialog.pass::backdrop{background:var(--veil)}
       return k ? k + ' ' + l.toLowerCase() + (k === 1 ? '' : 's') : '';
     }).filter(Boolean);
     var noList = n - withList.length;
-    $('import-count').textContent = n + (n === 1 ? ' guest' : ' guests') + ' to add';
+    var nPh = (pending.phones || []).length, newPh = list.filter(function(p){ return p.phone; }).length;
+    $('import-count').textContent = n ? n + (n === 1 ? ' guest' : ' guests') + ' to add' : nPh + ' WhatsApp ' + (nPh === 1 ? 'number' : 'numbers') + ' to add';
     $('import-from').textContent = pending.file ? 'From ' + pending.file : ''; $('import-from').hidden = !pending.file;
     $('import-how').hidden = true;   // the instructions step aside once a file has been read
     var notes = $('import-notes'); notes.textContent = '';
+    if (n && newPh) notes.appendChild(el('li', '', (newPh === n ? 'Every new guest has' : newPh + ' of the new guests have') + ' a WhatsApp number.'));
+    if (nPh) notes.appendChild(el('li', '', nPh + ' WhatsApp ' + (nPh === 1 ? 'number goes to a guest' : 'numbers go to guests') + ' already on the list' + (nPh <= 3 ? ': ' + pending.phones.map(function(x){ return x.name; }).join(', ') : '') + '.'));
     if (perList.length) notes.appendChild(el('li', '', perList.join(', ') + (noList ? ', ' + noList + ' with no list' : '') + '.'));
     var keeping = list.filter(function(p){ return p.code && !guests.has(p.code); }).length;
     if (keeping) notes.appendChild(el('li', '', keeping + (keeping === 1 ? ' guest keeps' : ' guests keep') + ' the entry code in the file, so passes already sent still work.'));
-    if (pending.skipped) notes.appendChild(el('li', '', pending.skipped + (pending.skipped === 1 ? ' name is' : ' names are') + ' already on the list and will be left as they are.'));
+    if (pending.skipped) notes.appendChild(el('li', '', pending.skipped + (pending.skipped === 1 ? ' name is' : ' names are') + ' already on the list and keep their passes' + (nPh ? '.' : ' as they are.')));
     if (pending.splitRows.length) notes.appendChild(el('li', '', pending.splitRows.length + (pending.splitRows.length === 1 ? ' row names' : ' rows name') + ' two people, so each person gets their own pass: ' + pending.splitRows.slice(0, 3).join('; ') + (pending.splitRows.length > 3 ? ' and more' : '') + '.'));
     if (pending.twins) notes.appendChild(el('li', '', pending.twins + (pending.twins === 1 ? ' name appears' : ' names appear') + ' more than once in the file. Each row still gets its own pass.'));
-    notes.appendChild(el('li', '', 'First in the file: ' + list.slice(0, 4).map(function(p){ return p.name; }).join(', ') + (n > 4 ? ' and more.' : '.')));
+    if (n) notes.appendChild(el('li', '', 'First in the file: ' + list.slice(0, 4).map(function(p){ return p.name; }).join(', ') + (n > 4 ? ' and more.' : '.')));
     $('import-default-field').hidden = !noList;
-    $('import-go').textContent = pending.retry ? 'Try the remaining ' + n : 'Add ' + n + (n === 1 ? ' guest' : ' guests');
+    $('import-go').textContent = pending.retry ? 'Try the remaining ' + n : n ? 'Add ' + n + (n === 1 ? ' guest' : ' guests') : 'Add ' + nPh + (nPh === 1 ? ' number' : ' numbers');
     $('import-go').disabled = false;
     $('import-preview').hidden = false; $('import-pick').hidden = true;
   }
@@ -2290,8 +2477,19 @@ dialog.pass::backdrop{background:var(--veil)}
     var have = new Set(all().map(function(g){ return g.name.toLowerCase(); })), seen = new Set(), twins = 0;
     var fresh = found.people.filter(function(p){ return !have.has(p.name.toLowerCase()); });
     fresh.forEach(function(p){ var k = p.name.toLowerCase(); if (seen.has(k)) twins++; seen.add(k); });
-    if (!fresh.length) { resetImport('All ' + found.people.length + ' names in ' + file.name + ' are already on the list, so there is nothing to add.'); return; }
-    pending = {people: fresh, splitRows: found.splitRows, skipped: found.people.length - fresh.length, twins: twins, file: file.name, retry: false};
+    // WhatsApp numbers in the file for guests already on the list are added to them (matched by entry code, else by a name only one guest has)
+    var byNm = {}, phoneUpd = [], upd = {};
+    all().forEach(function(g){ var k = g.name.toLowerCase(); byNm[k] = byNm[k] ? 'many' : g; });
+    if (isOwner) found.people.forEach(function(p){
+      if (!p.phone) return;
+      var g = (p.code && guests.get(p.code)) || (byNm[p.name.toLowerCase()] !== 'many' ? byNm[p.name.toLowerCase()] : null);
+      if (!g || upd[g.code]) return;
+      var cur = contacts.get(g.code);
+      if (cur && cur.phone === p.phone) return;
+      upd[g.code] = 1; phoneUpd.push({code: g.code, phone: p.phone, name: g.name});
+    });
+    if (!fresh.length && !phoneUpd.length) { resetImport('All ' + found.people.length + ' names in ' + file.name + ' are already on the list' + (found.people.some(function(p){ return p.phone; }) ? ', with their WhatsApp numbers,' : '') + ' so there is nothing to add.'); return; }
+    pending = {people: fresh, splitRows: found.splitRows, skipped: found.people.length - fresh.length, twins: twins, file: file.name, retry: false, phones: phoneUpd};
     say('import-msg', ''); showImport();
   });
   $('import-cancel').addEventListener('click', function(){ if (!importing && !reading) resetImport(''); });
@@ -2302,34 +2500,50 @@ dialog.pass::backdrop{background:var(--veil)}
     var fallback = LISTS.indexOf($('import-default').value) >= 0 ? $('import-default').value : LISTS[0];
     var taken = new Set(), no = 0, jobs = [], short = false;
     guests.forEach(function(g){ if (g.no > no) no = g.no; });
+    var phoneJobs = (pending.phones || []).slice();
     pending.people.forEach(function(p){
       var code = p.code && !guests.has(p.code) && !taken.has(p.code) ? p.code : newCode(taken);
       if (!code) { short = true; return; }
       taken.add(code);
       jobs.push({no: ++no, name: p.name, list: p.list || fallback, code: code, checkedInAt: 0});
+      if (p.phone && isOwner) phoneJobs.push({code: code, phone: p.phone, name: p.name, fresh: true});
     });
     if (short) { importing = false; $('import-go').disabled = false; say('import-msg', 'Could not make enough entry codes. Try again.', 'bad'); return; }
-    var queue = jobs.slice(), done = 0, failed = [], startedAt = Date.now();
+    var queue = jobs.slice(), done = 0, failed = [], startedAt = Date.now(), total = jobs.length + phoneJobs.length, phoneDone = 0, phoneFailed = 0;
     $('import-preview').hidden = true; $('import-progress').hidden = false; say('import-msg', '');
-    importProgress(0, jobs.length, startedAt);
+    importProgress(0, total, startedAt);
     function put(j){ return db.collection('guests').doc(j.code).set(j); }
     async function worker(){
       while (queue.length) {
         var j = queue.shift();
         try { await put(j); } catch (e1) { try { await sleep(500); await put(j); } catch (e2) { failed.push(j); } }
-        done++; importProgress(done, jobs.length, startedAt);
+        done++; importProgress(done, total, startedAt);
       }
     }
     await Promise.all([worker(), worker(), worker(), worker()]);
+    // then the WhatsApp numbers, kept apart from the guest list so only organisers can see them
+    var failedCodes = new Set(failed.map(function(j){ return j.code; }));
+    var pq = phoneJobs.filter(function(x){ return !failedCodes.has(x.code); });
+    async function phoneWorker(){
+      while (pq.length) {
+        var x = pq.shift();
+        try { await db.collection('contacts').doc(x.code).set({phone: x.phone, sentAt: x.fresh ? 0 : ((contacts.get(x.code) || {}).phone === x.phone ? (contacts.get(x.code).sentAt || 0) : 0)}); phoneDone++; }
+        catch (e3) { phoneFailed++; }
+        done++; importProgress(done, total, startedAt);
+      }
+    }
+    await Promise.all([phoneWorker(), phoneWorker(), phoneWorker(), phoneWorker()]);
     importing = false; $('import-progress').hidden = true;
     var added = jobs.length - failed.length;
     if (failed.length) {
-      pending = {people: failed.map(function(j){ return {name: j.name, list: j.list, code: j.code}; }), splitRows: [], skipped: 0, twins: 0, file: '', retry: true};
+      pending = {people: failed.map(function(j){ var pj = phoneJobs.filter(function(x){ return x.code === j.code; })[0]; return {name: j.name, list: j.list, code: j.code, phone: pj ? pj.phone : ''}; }), splitRows: [], skipped: 0, twins: 0, file: '', retry: true, phones: []};
       showImport();
       say('import-msg', added + ' added. ' + failed.length + ' could not be added. Check the signal, then try the remaining ones.', 'bad');
     } else {
       importOpen = false; resetImport('');
-      say('m-msg', 'Added ' + added + (added === 1 ? ' guest' : ' guests') + '. Each has their own QR code below, ready to download or share.', 'good');
+      say('m-msg', (added ? 'Added ' + added + (added === 1 ? ' guest' : ' guests') + (phoneDone ? ' and ' + phoneDone + ' WhatsApp ' + (phoneDone === 1 ? 'number' : 'numbers') : '') + '. Each has their own QR code below, ready to send.'
+          : 'Added ' + phoneDone + ' WhatsApp ' + (phoneDone === 1 ? 'number' : 'numbers') + '. Send each pass from its row below.')
+        + (phoneFailed ? ' ' + phoneFailed + ' WhatsApp ' + (phoneFailed === 1 ? 'number' : 'numbers') + ' could not be saved: the database rules need the WhatsApp update.' : ''), phoneFailed ? 'bad' : 'good');
     }
     render();
   });
@@ -2579,9 +2793,11 @@ dialog.pass::backdrop{background:var(--veil)}
   }
   $('csv').addEventListener('click', async function(){
     if (!saver) { say('reset-msg', 'This device cannot save files from here.', 'bad'); return; }
-    var lines = [['No.', 'Guest', 'List', 'Entry code', 'Arrived', 'Arrived at', 'Checked in by'].join(',')];
+    var lines = [['No.', 'Guest', 'List', 'Entry code', 'Arrived', 'Arrived at', 'Checked in by', 'WhatsApp number', 'Sent on WhatsApp'].join(',')];
     all().sort(function(a, b){ return a.no - b.no; }).forEach(function(g){
-      lines.push([g.no, g.name, g.list, g.code, g.checkedInAt ? 'Yes' : 'No', g.checkedInAt ? new Date(g.checkedInAt).toLocaleString() : '', g.checkedInAt ? byName(g) : ''].map(cell).join(','));
+      var c = contacts.get(g.code) || {};
+      lines.push([g.no, g.name, g.list, g.code, g.checkedInAt ? 'Yes' : 'No', g.checkedInAt ? new Date(g.checkedInAt).toLocaleString() : '', g.checkedInAt ? byName(g) : '',
+        c.phone ? showPhone(c.phone) : '', c.sentAt ? new Date(c.sentAt).toLocaleString() : ''].map(cell).join(','));
     });
     try { await saver.save({filename: (coupleLine('and') + ' guest list').replace(/[^A-Za-z0-9 '\-]/g, '').trim() + '.csv', data: '﻿' + lines.join('\r\n') + '\r\n'}); say('reset-msg', 'Guest list saved.', 'good'); }
     catch (err) { say('reset-msg', err && err.code === 'declined' ? 'Not saved.' : 'Could not save the guest list here.', err && err.code === 'declined' ? '' : 'bad'); }
@@ -2627,7 +2843,7 @@ dialog.pass::backdrop{background:var(--veil)}
     var codes = Array.from(guests.keys()), done = 0, failedN = 0;
     for (var i = 0; i < codes.length; i += 10) {
       await Promise.all(codes.slice(i, i + 10).map(function(c){
-        return db.collection('guests').doc(c).delete().then(function(){ done++; picked.delete(c); }, function(){ failedN++; });
+        return db.collection('guests').doc(c).delete().then(function(){ done++; picked.delete(c); dropContact(c); }, function(){ failedN++; });
       }));
       say('reset-msg', 'Removing guests: ' + done + ' of ' + codes.length + '.');
     }
@@ -2754,7 +2970,7 @@ dialog.pass::backdrop{background:var(--veil)}
   }
   /* ================= settings: its own page, one tab per section ================= */
   var TABS = {event: ['event-box', 'Event details'], theme: ['theme-box', 'Colours'], people: ['staff-box', 'People'],
-              passcode: ['lock-box', 'Passcode'], checkin: ['ci-box', 'Check-in code'], types: ['types-box', 'Guest types'], list: ['list-box', 'Guest list']};
+              passcode: ['lock-box', 'Passcode'], checkin: ['ci-box', 'Check-in code'], types: ['types-box', 'Guest types'], wa: ['wa-box', 'WhatsApp'], list: ['list-box', 'Guest list']};
   function showTab(name){
     if (!TABS[name]) name = 'event';
     sTab = name;
@@ -2772,6 +2988,7 @@ dialog.pass::backdrop{background:var(--veil)}
     if (window.scrollY > top) window.scrollTo(0, top);
     if (preview) paintSample();
     if (name === 'types') renderTypes();
+    if (name === 'wa') fillWaForm();
   }
   // openSettings() opens the first tab, openSettings('people') a named one, openSettings(true) the passcode box
   function openSettings(where){
@@ -3002,6 +3219,16 @@ dialog.pass::backdrop{background:var(--veil)}
       useCiLock(snap.exists ? snap.data() : null);
       renderDoor(); if (mode === 'settings') renderCi();
     }, function(){});
+    db.doc('settings/whatsapp').onSnapshot(function(snap){
+      var d = snap.exists ? snap.data() || {} : {};
+      waCfg = {message: typeof d.message === 'string' ? d.message.slice(0, 1500) : '', cc: String(d.cc || '234').replace(/[^0-9]/g, '').slice(0, 4) || '234'};
+      if (mode === 'settings' && sTab === 'wa' && document.activeElement !== $('wa-msg')) fillWaForm();
+    }, function(){});
+    if (isOwner) db.collection('contacts').onSnapshot(function(snap){
+      contacts.clear(); contactsOk = true;
+      snap.docs.forEach(function(d){ var c = d.data() || {}; if (c.phone) contacts.set(d.id, {phone: String(c.phone).replace(/[^0-9]/g, ''), sentAt: Number(c.sentAt) || 0}); });
+      if (mode === 'admin') renderAdmin();
+    }, function(){ contactsOk = false; if (mode === 'settings') $('wa-rules').hidden = false; });
     db.doc('settings/lists').onSnapshot(function(snap){
       LISTS = cleanTypes(snap.exists ? snap.data() : null);
       fillTypes(); render(); if (mode === 'settings') renderTypes();

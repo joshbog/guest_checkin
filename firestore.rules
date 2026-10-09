@@ -54,6 +54,12 @@ service cloud.firestore {
       allow write: if isOrganiser();
     }
 
+    // Guests' WhatsApp numbers and when their pass was sent, kept apart from the guest list
+    // so that only organisers can see them (door helpers cannot). The document ID is the guest's entry code.
+    match /contacts/{code} {
+      allow read, write: if isOrganiser();
+    }
+
     // The people who can sign in. An organiser cannot change their own role or remove their own entry,
     // so the last organiser can never lock themselves out by mistake; they may change their own name.
     match /staff/{email} {
