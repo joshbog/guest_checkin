@@ -245,6 +245,14 @@ select.text-in::-ms-expand{display:none}
 /* ---------- the guest list manager ---------- */
 /* the guest list page: the two actions first, then finding a guest, then the list */
 .actions{display:flex;flex-wrap:wrap;gap:12px}
+/* an empty list: adding one guest and uploading a list, side by side and equal */
+.start{display:grid;gap:14px}
+.start h2{font:400 clamp(1.5rem,5vw,1.9rem)/1.15 var(--display)}
+.start-choices{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.start-choice{display:grid;gap:8px;align-content:start;padding:clamp(14px,4vw,20px);text-align:left;background:var(--banner);border:1px solid var(--accent);border-radius:0;cursor:pointer;color:var(--ink)}
+.start-choice b{font:500 .82rem/1.2 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.start-choice span{color:var(--muted);line-height:1.45}
+.start-choice:hover,.start-choice:focus-visible{background:var(--tab-on);outline:none}
 .actions > .btn,.add-menu{flex:1 1 10rem}
 /* Add guests opens two choices: one guest, or many from Excel */
 .add-menu{position:relative;display:grid}
@@ -476,7 +484,7 @@ dialog.pass::backdrop{background:var(--veil)}
   <p class="notice" id="notice" hidden></p>
 
   <div class="notice nudge" id="begin" hidden>
-    <p>No guests yet. Open Manage guests to upload your guest list from Excel, or add guests one at a time.</p>
+    <p>No guests yet. Open Manage guests to add guests one at a time or upload a list from Excel.</p>
     <button class="btn small" type="button" id="begin-go">Get started</button>
   </div>
 
@@ -510,7 +518,15 @@ dialog.pass::backdrop{background:var(--veil)}
     <button class="btn small" type="button" id="lock-nudge-go">Set a passcode</button>
   </div>
 
-  <div class="actions">
+  <section class="start" id="m-start" hidden>
+    <h2>Start your guest list</h2>
+    <div class="start-choices">
+      <button class="start-choice" type="button" id="start-one"><b>Add a guest</b><span>Type one name and choose their guest type.</span></button>
+      <button class="start-choice" type="button" id="start-bulk"><b>Upload a list</b><span>Add many guests at once from an Excel file.</span></button>
+    </div>
+  </section>
+
+  <div class="actions" id="actions">
     <div class="add-menu" id="add-menu">
       <button class="btn add-btn" type="button" id="add-open" aria-haspopup="menu" aria-expanded="false" aria-controls="add-choices">Add guests<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true" focusable="false"><path d="M2 4.2 6 8l4-3.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"/></svg></button>
       <div class="add-choices" id="add-choices" role="menu" hidden>
@@ -1714,11 +1730,14 @@ dialog.pass::backdrop{background:var(--veil)}
     // keep the cursor where it was if the list refreshes while a name is being edited
     var active = document.activeElement, keep = active && active.id === 'edit-name' ? [active.selectionStart, active.selectionEnd] : null;
     var none = loaded && !list.length;
-    $('import').hidden = !(none || importOpen);
+    $('import').hidden = !importOpen;
     $('tools').hidden = none;
+    // an empty list offers both ways in, equally; the Add guests button takes over once there is a guest
+    $('m-start').hidden = !(none && !importOpen && $('add-form').hidden);
+    $('actions').hidden = none;
     $('import-eyebrow').textContent = none ? 'No guests yet' : 'Excel upload';
     $('import-title').textContent = none ? 'Upload your guest list' : 'Upload more guests';
-    $('import-close').hidden = none;
+    $('import-close').hidden = false;
     var rows = $('m-rows'), shown = list.filter(matches);
     rows.textContent = '';
     shown.forEach(function(g){
@@ -1980,7 +1999,9 @@ dialog.pass::backdrop{background:var(--veil)}
     importOpen = true; resetImport(''); renderAdmin();
     try { $('import').scrollIntoView({block: 'start', behavior: 'smooth'}); } catch (e) {}
   });
-  $('add-cancel').addEventListener('click', function(){ $('add-form').hidden = true; $('add-open').hidden = false; dupOk = ''; say('add-msg', ''); });
+  $('add-cancel').addEventListener('click', function(){ $('add-form').hidden = true; $('add-open').hidden = false; dupOk = ''; say('add-msg', ''); renderAdmin(); });
+  $('start-one').addEventListener('click', function(){ $('add-one').click(); renderAdmin(); $('add-name').focus(); });
+  $('start-bulk').addEventListener('click', function(){ $('add-bulk').click(); });
   $('add-form').addEventListener('submit', async function(e){
     e.preventDefault();
     if (!db || !loaded) { say('add-msg', 'The guest list is still opening. Try again in a moment.', 'bad'); return; }
