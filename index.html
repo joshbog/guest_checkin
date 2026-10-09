@@ -672,7 +672,7 @@ dialog.pass::backdrop{background:var(--veil)}
         <li>A column headed <b>Guest name</b>, and beside it a column headed <b>List</b> that says Groom, Bride or Vendor.</li>
         <li>Or one column of names for each list, headed <b>Groom</b>, <b>Bride</b> and <b>Vendors</b>.</li>
         <li>Every guest gets their own QR code. If the file has an <b>Entry code</b> column, those codes are kept.</li>
-        <li>For WhatsApp, add a <b>WhatsApp number</b> column. Write numbers abroad with + and their country code (+44 7700 900123), or add a <b>Country code</b> column. Numbers without one use the code in Settings.</li>
+        <li>For WhatsApp, add a <b>WhatsApp number</b> column, each number with + and its country code, for example +2347019103045.</li>
       </ul>
     </div>
     <div class="row" id="import-pick">
@@ -2610,14 +2610,14 @@ dialog.pass::backdrop{background:var(--veil)}
     if (!saver) { say('import-msg', 'This device cannot save files from here. Use any Excel sheet with a column headed Guest name and a column headed List.', 'bad'); return; }
     try { await loadSheetReader(); } catch (err) { say('import-msg', 'The Excel reader did not load. Check the signal and try again.', 'bad'); return; }
     try {
-      var X = window.XLSX, sheet = X.utils.aoa_to_sheet([['Guest name', 'List', 'WhatsApp number', 'Country code']]), book = X.utils.book_new();
-      sheet['!cols'] = [{wch: 36}, {wch: 18}, {wch: 22}, {wch: 14}];
-      // the number columns are text, so Excel keeps a leading 0 or + as typed
-      for (var r = 1; r <= 1000; r++) ['C', 'D'].forEach(function(col){ sheet[col + (r + 1)] = {t: 's', v: '', z: '@'}; });
-      sheet['!ref'] = 'A1:D1001';
+      var X = window.XLSX, sheet = X.utils.aoa_to_sheet([['Guest name', 'List', 'WhatsApp number']]), book = X.utils.book_new();
+      sheet['!cols'] = [{wch: 36}, {wch: 18}, {wch: 22}];
+      // the number column is text, so Excel keeps the + as typed
+      for (var r = 1; r <= 1000; r++) sheet['C' + (r + 1)] = {t: 's', v: '', z: '@'};
+      sheet['!ref'] = 'A1:C1001';
       X.utils.book_append_sheet(book, sheet, 'Guests');
       await saver.save({filename: 'Guest list template.xlsx', data: new Uint8Array(X.write(book, {bookType: 'xlsx', type: 'array'}))});
-      say('import-msg', 'Template saved. Put one guest on each row: their name, Groom, Bride or Vendor in the List column, and their WhatsApp number if you have it. For numbers outside ' + (waCfg.cc === '234' ? 'Nigeria' : '+' + waCfg.cc) + ', write + and the country code (+44 7700 900123) or fill in Country code. Then upload it here.', 'good');
+      say('import-msg', 'Template saved. Put one guest on each row: their name, Groom, Bride or Vendor in the List column, and their WhatsApp number with + and the country code, for example +2347019103045. Then upload it here.', 'good');
     } catch (err) { say('import-msg', err && err.code === 'declined' ? 'Not saved.' : 'Could not save the template here.', err && err.code === 'declined' ? '' : 'bad'); }
   });
   $('import-close').addEventListener('click', function(){ if (importing || reading) return; importOpen = false; resetImport(''); renderAdmin(); });
