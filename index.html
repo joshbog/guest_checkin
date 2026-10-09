@@ -113,6 +113,26 @@ button,input,select{font:inherit;color:inherit}
 .note .msg{min-width:0}
 .note .note-x{width:36px;height:36px;border-color:transparent}
 .notice{padding:14px 16px;border:1px solid var(--accent);background:var(--banner);color:var(--ink)}
+/* the Excel upload: instructions, the file summary and the progress are three clearly different blocks */
+.notice.import{display:grid;gap:20px;padding:20px}
+.import h2{font:400 clamp(1.5rem,5vw,1.9rem)/1.15 var(--display)}
+.imp-label{font:500 .72rem/1.3 var(--body);letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.imp-how{display:grid;gap:10px;padding:14px 16px;background:var(--paper-2);border-left:3px solid var(--line);color:var(--muted)}
+.imp-how b{font-weight:500;color:var(--ink)}
+.imp-list{display:grid;gap:10px;margin:0;padding-left:1.2em;line-height:1.5;list-style:disc}
+.imp-list li::marker{color:var(--accent)}
+.imp-step{display:grid;gap:14px;padding:16px;border:1px solid var(--line);background:var(--paper)}
+.imp-head{display:grid;gap:4px}
+.import-count{font:400 1.45rem/1.2 var(--display);color:var(--ink)}
+.imp-file{font-size:.95rem;color:var(--muted);overflow-wrap:anywhere}
+.imp-bar{height:10px;background:var(--paper-2);border:1px solid var(--line);overflow:hidden}
+.imp-bar span{display:block;height:100%;width:0;background:var(--wine);transition:width .3s ease}
+.imp-stat{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font-variant-numeric:tabular-nums}
+.imp-stat b{font:400 1.6rem/1 var(--display);color:var(--ink)}
+.imp-stat span,.imp-left{color:var(--muted)}
+.imp-wait{font-size:.9rem;color:var(--muted)}
+.imp-msg{line-height:1.5}
+@media (prefers-reduced-motion:reduce){.imp-bar span{transition:none}}
 #signin{display:grid;gap:20px;justify-items:start;padding-block:18px}
 .g-btn{grid-auto-flow:column;gap:10px}
 .g-mark{width:16px;height:16px;background:currentColor;   /* the icon takes the colour of the button's label */
@@ -517,15 +537,27 @@ dialog.pass::backdrop{background:var(--veil)}
       <button class="icon-btn" type="button" id="import-close" aria-label="Close upload" hidden><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false"><path d="M4 4 16 16M16 4 4 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></button>
     </div>
     <h2 id="import-title">Upload your guest list</h2>
-    <p class="hint">Choose an Excel file with one guest per row: a column headed Guest name and, beside it, a column headed List that says Groom, Bride or Vendor. A sheet with one column of names for each, headed Groom, Bride and Vendors, works too. Every guest gets their own QR code; if the file has an Entry code column, those codes are kept.</p>
+    <div class="imp-how" id="import-how">
+      <p class="imp-label">How to set out your file</p>
+      <ul class="imp-list">
+        <li>One guest on each row.</li>
+        <li>A column headed <b>Guest name</b>, and beside it a column headed <b>List</b> that says Groom, Bride or Vendor.</li>
+        <li>Or one column of names for each list, headed <b>Groom</b>, <b>Bride</b> and <b>Vendors</b>.</li>
+        <li>Every guest gets their own QR code. If the file has an <b>Entry code</b> column, those codes are kept.</li>
+      </ul>
+    </div>
     <div class="row" id="import-pick">
       <input class="sr" id="import-file" type="file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv">
       <label class="btn" for="import-file">Choose Excel file</label>
       <button class="btn ghost" type="button" id="import-template">Download template</button>
     </div>
-    <div class="import-preview" id="import-preview" hidden>
-      <p class="import-count" id="import-count"></p>
-      <ul class="import-notes" id="import-notes"></ul>
+    <div class="import-preview imp-step" id="import-preview" hidden>
+      <p class="imp-label">Ready to add</p>
+      <div class="imp-head">
+        <p class="import-count" id="import-count"></p>
+        <p class="imp-file" id="import-from" hidden></p>
+      </div>
+      <ul class="import-notes imp-list" id="import-notes"></ul>
       <div class="field" id="import-default-field" hidden>
         <label class="label" for="import-default">Guests with no list go to</label>
         <select class="text-in" id="import-default" data-types="pick"><option>Groom's guest</option><option>Bride's guest</option><option>Vendor</option></select>
@@ -535,7 +567,14 @@ dialog.pass::backdrop{background:var(--veil)}
         <button class="btn ghost" type="button" id="import-cancel">Cancel</button>
       </div>
     </div>
-    <p class="msg" id="import-msg" role="status"></p>
+    <div class="imp-step imp-progress" id="import-progress" hidden>
+      <p class="imp-label">Adding guests</p>
+      <div class="imp-bar" id="import-bar" role="progressbar" aria-label="Adding guests" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="import-fill"></span></div>
+      <p class="imp-stat"><b id="import-pct">0%</b><span id="import-done"></span></p>
+      <p class="imp-left" id="import-left">Working out the time left.</p>
+      <p class="imp-wait">Keep this page open until it finishes.</p>
+    </div>
+    <p class="msg imp-msg" id="import-msg" role="status"></p>
   </section>
 
   <section class="tools" id="tools">
@@ -2041,7 +2080,22 @@ dialog.pass::backdrop{background:var(--veil)}
     return {people: people, splitRows: splitRows};
   }
   function resetImport(text, tone){
-    pending = null; $('import-preview').hidden = true; $('import-pick').hidden = false; say('import-msg', text || '', tone);
+    pending = null; $('import-preview').hidden = true; $('import-pick').hidden = false; $('import-how').hidden = false; $('import-progress').hidden = true;
+    say('import-msg', text || '', tone);
+  }
+  // progress while guests are added: a bar, the percentage, how many, and roughly how long is left
+  function importProgress(done, total, startedAt){
+    var pct = total ? Math.floor(done * 100 / total) : 0;
+    $('import-fill').style.width = pct + '%'; $('import-bar').setAttribute('aria-valuenow', String(pct));
+    $('import-pct').textContent = pct + '%';
+    $('import-done').textContent = done + ' of ' + total + (total === 1 ? ' guest' : ' guests');
+    var left = '';
+    if (done >= Math.min(3, total) && done < total) {
+      var secs = Math.ceil((Date.now() - startedAt) / done * (total - done) / 1000);
+      left = secs < 5 ? 'Almost done.' : secs < 60 ? 'About ' + (Math.ceil(secs / 5) * 5) + ' seconds left.' : 'About ' + Math.ceil(secs / 60) + (secs < 120 ? ' minute' : ' minutes') + ' left.';
+    } else if (done >= total) left = 'Finishing.';
+    else left = 'Working out the time left.';
+    $('import-left').textContent = left;
   }
   function showImport(){
     var list = pending.people, n = list.length, withList = list.filter(function(p){ return p.list; });
@@ -2050,7 +2104,9 @@ dialog.pass::backdrop{background:var(--veil)}
       return k ? k + ' ' + l.toLowerCase() + (k === 1 ? '' : 's') : '';
     }).filter(Boolean);
     var noList = n - withList.length;
-    $('import-count').textContent = n + (n === 1 ? ' guest' : ' guests') + ' to add' + (pending.file ? ' from ' + pending.file : '') + '.';
+    $('import-count').textContent = n + (n === 1 ? ' guest' : ' guests') + ' to add';
+    $('import-from').textContent = pending.file ? 'From ' + pending.file : ''; $('import-from').hidden = !pending.file;
+    $('import-how').hidden = true;   // the instructions step aside once a file has been read
     var notes = $('import-notes'); notes.textContent = '';
     if (perList.length) notes.appendChild(el('li', '', perList.join(', ') + (noList ? ', ' + noList + ' with no list' : '') + '.'));
     var keeping = list.filter(function(p){ return p.code && !guests.has(p.code); }).length;
@@ -2058,7 +2114,7 @@ dialog.pass::backdrop{background:var(--veil)}
     if (pending.skipped) notes.appendChild(el('li', '', pending.skipped + (pending.skipped === 1 ? ' name is' : ' names are') + ' already on the list and will be left as they are.'));
     if (pending.splitRows.length) notes.appendChild(el('li', '', pending.splitRows.length + (pending.splitRows.length === 1 ? ' row names' : ' rows name') + ' two people, so each person gets their own pass: ' + pending.splitRows.slice(0, 3).join('; ') + (pending.splitRows.length > 3 ? ' and more' : '') + '.'));
     if (pending.twins) notes.appendChild(el('li', '', pending.twins + (pending.twins === 1 ? ' name appears' : ' names appear') + ' more than once in the file. Each row still gets its own pass.'));
-    notes.appendChild(el('li', '', 'First in the file: ' + list.slice(0, 4).map(function(p){ return p.name; }).join(', ') + (n > 4 ? ' …' : '') + '.'));
+    notes.appendChild(el('li', '', 'First in the file: ' + list.slice(0, 4).map(function(p){ return p.name; }).join(', ') + (n > 4 ? ' and more.' : '.')));
     $('import-default-field').hidden = !noList;
     $('import-go').textContent = pending.retry ? 'Try the remaining ' + n : 'Add ' + n + (n === 1 ? ' guest' : ' guests');
     $('import-go').disabled = false;
@@ -2104,17 +2160,19 @@ dialog.pass::backdrop{background:var(--veil)}
       jobs.push({no: ++no, name: p.name, list: p.list || fallback, code: code, checkedInAt: 0});
     });
     if (short) { importing = false; $('import-go').disabled = false; say('import-msg', 'Could not make enough entry codes. Try again.', 'bad'); return; }
-    var queue = jobs.slice(), done = 0, failed = [];
+    var queue = jobs.slice(), done = 0, failed = [], startedAt = Date.now();
+    $('import-preview').hidden = true; $('import-progress').hidden = false; say('import-msg', '');
+    importProgress(0, jobs.length, startedAt);
     function put(j){ return db.collection('guests').doc(j.code).set(j); }
     async function worker(){
       while (queue.length) {
         var j = queue.shift();
         try { await put(j); } catch (e1) { try { await sleep(500); await put(j); } catch (e2) { failed.push(j); } }
-        done++; say('import-msg', 'Adding guests: ' + done + ' of ' + jobs.length + '.');
+        done++; importProgress(done, jobs.length, startedAt);
       }
     }
     await Promise.all([worker(), worker(), worker(), worker()]);
-    importing = false;
+    importing = false; $('import-progress').hidden = true;
     var added = jobs.length - failed.length;
     if (failed.length) {
       pending = {people: failed.map(function(j){ return {name: j.name, list: j.list, code: j.code}; }), splitRows: [], skipped: 0, twins: 0, file: '', retry: true};
